@@ -18,13 +18,16 @@ export type ClientCode =
   | 'ADV'
   | 'BD';
 
+// UPDATED STATUSES
 export type OrderStatus = 
-  | 'YARN_ISSUED'
+  | 'ORDER_APPROVAL'
+  | 'RENDERING'
   | 'DYEING'
-  | 'ISSUED_TO_SUPPLIER'
-  | 'CARPET_RECEIVED'
-  | 'FINISHING'
-  | 'EXPORTED';
+  | 'DYEING_READY'
+  | 'WAITING_FOR_LOOM'
+  | 'ONLOOM'
+  | 'ONLOOM_PROGRESS'
+  | 'OFFLOOM';
 
 export interface User {
   id: string;

@@ -1,4 +1,3 @@
-
 import { ClientCode, Order, User, OrderStatus } from "@/types";
 
 export const USERS: User[] = [
@@ -18,13 +17,15 @@ const createOrderTimeline = (status: Order['status']): Order['timeline'] => {
   const twoWeeksAgo = new Date(now);
   twoWeeksAgo.setDate(now.getDate() - 14);
   
-  const statuses: Order['status'][] = [
-    'YARN_ISSUED',
+  const statuses: OrderStatus[] = [
+    'ORDER_APPROVAL',
+    'RENDERING',
     'DYEING',
-    'ISSUED_TO_SUPPLIER',
-    'CARPET_RECEIVED',
-    'FINISHING',
-    'EXPORTED'
+    'DYEING_READY',
+    'WAITING_FOR_LOOM',
+    'ONLOOM',
+    'ONLOOM_PROGRESS',
+    'OFFLOOM'
   ];
   
   const currentStatusIndex = statuses.indexOf(status);
@@ -64,10 +65,10 @@ export const ORDERS: Order[] = [
     orderNumber: "WS-2024-002",
     carpetName: "Mountain Stream",
     dimensions: "6' x 9'",
-    status: "YARN_ISSUED",
+    status: "ORDER_APPROVAL",
     hasDelay: true,
-    delayReason: "Waiting for special silk yarn import",
-    timeline: createOrderTimeline("YARN_ISSUED"),
+    delayReason: "Waiting for order approval",
+    timeline: createOrderTimeline("ORDER_APPROVAL"),
     estimatedCompletion: "2024-07-20"
   },
   {
@@ -76,9 +77,9 @@ export const ORDERS: Order[] = [
     orderNumber: "LD-2024-001",
     carpetName: "Royal Palace",
     dimensions: "12' x 15'",
-    status: "FINISHING",
+    status: "ONLOOM_PROGRESS",
     hasDelay: false,
-    timeline: createOrderTimeline("FINISHING"),
+    timeline: createOrderTimeline("ONLOOM_PROGRESS"),
     estimatedCompletion: "2024-05-30"
   },
   {
@@ -87,9 +88,9 @@ export const ORDERS: Order[] = [
     orderNumber: "LD-2024-002",
     carpetName: "Urban Grid",
     dimensions: "9' x 12'",
-    status: "ISSUED_TO_SUPPLIER",
+    status: "WAITING_FOR_LOOM",
     hasDelay: false,
-    timeline: createOrderTimeline("ISSUED_TO_SUPPLIER"),
+    timeline: createOrderTimeline("WAITING_FOR_LOOM"),
     estimatedCompletion: "2024-06-30"
   },
   {
@@ -98,10 +99,10 @@ export const ORDERS: Order[] = [
     orderNumber: "HR-2024-001",
     carpetName: "Classic Mandala",
     dimensions: "10' x 10'",
-    status: "CARPET_RECEIVED",
+    status: "RENDERING",
     hasDelay: true,
     delayReason: "Pattern adjustment required",
-    timeline: createOrderTimeline("CARPET_RECEIVED"),
+    timeline: createOrderTimeline("RENDERING"),
     estimatedCompletion: "2024-06-10"
   },
   {
@@ -110,9 +111,9 @@ export const ORDERS: Order[] = [
     orderNumber: "RM-2024-001",
     carpetName: "Tibetan Clouds",
     dimensions: "8' x 10'",
-    status: "EXPORTED",
+    status: "OFFLOOM",
     hasDelay: false,
-    timeline: createOrderTimeline("EXPORTED"),
+    timeline: createOrderTimeline("OFFLOOM"),
     estimatedCompletion: "2024-04-15"
   },
   {
@@ -121,9 +122,9 @@ export const ORDERS: Order[] = [
     orderNumber: "RM-2024-002",
     carpetName: "Mountain Peaks",
     dimensions: "6' x 9'",
-    status: "FINISHING",
+    status: "ONLOOM",
     hasDelay: false,
-    timeline: createOrderTimeline("FINISHING"),
+    timeline: createOrderTimeline("ONLOOM"),
     estimatedCompletion: "2024-05-25"
   },
   {
@@ -132,10 +133,10 @@ export const ORDERS: Order[] = [
     orderNumber: "RM-2024-003",
     carpetName: "Valley Sunset",
     dimensions: "9' x 12'",
-    status: "DYEING",
+    status: "DYEING_READY",
     hasDelay: true,
     delayReason: "Special color blend development",
-    timeline: createOrderTimeline("DYEING"),
+    timeline: createOrderTimeline("DYEING_READY"),
     estimatedCompletion: "2024-07-05"
   }
 ];
@@ -145,8 +146,6 @@ export const getUser = (username: string): User | undefined => {
 };
 
 export const validateCredentials = (username: string, password: string): User | null => {
-  // In a real app, you would validate against a secure database
-  // For demo purposes, we're accepting any password that matches the pattern "<username>_pass"
   const expectedPassword = `${username}_pass`;
   if (password === expectedPassword) {
     return getUser(username) || null;
@@ -162,43 +161,63 @@ export const getOrderById = (orderId: string): Order | undefined => {
   return ORDERS.find(order => order.id === orderId);
 };
 
-export const getStatusDisplayInfo = (status: OrderStatus): { label: string, color: string, description: string } => {
+export const getStatusDisplayInfo = (
+  status: OrderStatus
+): { label: string; color: string; description: string } => {
   switch (status) {
-    case 'YARN_ISSUED':
-      return { 
-        label: "Yarn Issued", 
-        color: "blue", 
-        description: "Raw materials have been selected and issued for production." 
+    case 'ORDER_APPROVAL':
+      return {
+        label: "Order Approval",
+        color: "blue",
+        description: "Awaiting approval for your order."
+      };
+    case 'RENDERING':
+      return {
+        label: "Rendering",
+        color: "purple",
+        description: "Design artwork/rendering is being prepared."
       };
     case 'DYEING':
-      return { 
-        label: "Dyeing", 
-        color: "purple", 
-        description: "Yarn is being dyed according to the color specifications." 
+      return {
+        label: "Dyeing",
+        color: "sky",
+        description: "Yarn is being dyed specifically for your carpet."
       };
-    case 'ISSUED_TO_SUPPLIER':
-      return { 
-        label: "Issued to Supplier", 
-        color: "yellow", 
-        description: "Materials have been sent to the weaving facility." 
+    case 'DYEING_READY':
+      return {
+        label: "Dyeing Ready",
+        color: "indigo",
+        description: "Dyed yarn is ready for further processing."
       };
-    case 'CARPET_RECEIVED':
-      return { 
-        label: "Carpet Received", 
-        color: "green", 
-        description: "The woven carpet has been received from the supplier." 
+    case 'WAITING_FOR_LOOM':
+      return {
+        label: "Waiting for Loom",
+        color: "amber",
+        description: "Waiting for loom allocation to start weaving."
       };
-    case 'FINISHING':
-      return { 
-        label: "Finishing", 
-        color: "gold", 
-        description: "The carpet is undergoing final finishing touches." 
+    case 'ONLOOM':
+      return {
+        label: "Onloom",
+        color: "green",
+        description: "Your carpet is being woven on the loom."
       };
-    case 'EXPORTED':
-      return { 
-        label: "Exported", 
-        color: "red", 
-        description: "The carpet has been shipped and is on its way to you." 
+    case 'ONLOOM_PROGRESS':
+      return {
+        label: "Onloom Progress",
+        color: "teal",
+        description: "Woven carpet is under progress (in production)."
+      };
+    case 'OFFLOOM':
+      return {
+        label: "Offloom",
+        color: "red",
+        description: "Carpet has come off the loom for finishing."
+      };
+    default:
+      return {
+        label: "Unknown",
+        color: "gray",
+        description: "Status not available."
       };
   }
 };
