@@ -1,5 +1,5 @@
 
-import { ClientCode, Order, User } from "@/types";
+import { ClientCode, Order, User, OrderStatus } from "@/types";
 
 export const USERS: User[] = [
   { id: "1", username: "ws_client", clientCode: "WS", clientName: "Washington Studios" },
