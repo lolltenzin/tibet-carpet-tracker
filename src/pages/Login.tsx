@@ -38,21 +38,21 @@ const Login = () => {
               <span className="font-bold text-white text-xl">TC</span>
             </div>
           </Link>
-          <h1 className="text-2xl font-bold">Tibet Carpet Client Login</h1>
-          <p className="text-muted-foreground">Enter your credentials to access your dashboard</p>
+          <h1 className="text-2xl font-bold">Tibet Carpet Client Portal</h1>
+          <p className="text-muted-foreground">Secure Access to Your Carpet Order Tracking</p>
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-md border">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Client Username</Label>
+              <Label htmlFor="username">Client Identifier</Label>
               <Input
                 id="username"
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                placeholder="e.g., ws_client"
+                placeholder="Enter your client code"
                 disabled={isSubmitting}
               />
             </div>
@@ -65,7 +65,7 @@ const Login = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                placeholder="••••••••"
+                placeholder="Enter your password"
                 disabled={isSubmitting}
               />
             </div>
@@ -75,7 +75,7 @@ const Login = () => {
               className="w-full bg-tibet-red hover:bg-tibet-red/90" 
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Logging in..." : "Sign In"}
+              {isSubmitting ? "Authenticating..." : "Access Order Portal"}
             </Button>
           </form>
           
@@ -96,3 +96,4 @@ const Login = () => {
 };
 
 export default Login;
+
