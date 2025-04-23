@@ -1,4 +1,3 @@
-
 import { useParams, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/Header";
@@ -11,11 +10,7 @@ import { ArrowLeft, Calendar, Clock } from "lucide-react";
 const OrderDetail = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const { user } = useAuth();
-  
-  // Get order details
   const order = orderId ? getOrderById(orderId) : undefined;
-
-  // Check if order exists and belongs to the logged-in client
   const hasAccess = order && user && order.clientCode === user.clientCode;
 
   if (!order || !hasAccess) {
@@ -136,12 +131,18 @@ const OrderDetail = () => {
               <div className="bg-muted/30 p-4 rounded-md border">
                 <StatusBadge status={order.status} size="lg" />
                 <p className="mt-2 text-sm">
-                  {order.status === "YARN_ISSUED" && "Raw materials have been selected and issued for production."}
+                  {order.status === "ORDER_APPROVAL" && "Raw materials have been selected and issued for production."}
+                  {order.status === "RENDERING" && "Design artwork/rendering is being prepared."}
                   {order.status === "DYEING" && "Your carpet's yarn is being dyed to match your color specifications."}
-                  {order.status === "ISSUED_TO_SUPPLIER" && "Materials have been sent to our expert weavers to begin crafting your carpet."}
-                  {order.status === "CARPET_RECEIVED" && "Your carpet has been received from our weavers and is now in our facility."}
+                  {order.status === "DYEING_READY" && "Dyed yarn is ready for further processing."}
+                  {order.status === "WAITING_FOR_LOOM" && "Waiting for loom allocation to start weaving."}
+                  {order.status === "ONLOOM" && "Your carpet is being woven on the loom."}
+                  {order.status === "ONLOOM_PROGRESS" && "Woven carpet is under progress (in production)."}
+                  {order.status === "OFFLOOM" && "Carpet has come off the loom for finishing."}
                   {order.status === "FINISHING" && "Your carpet is receiving final touches, including edge finishing and quality control."}
-                  {order.status === "EXPORTED" && "Your carpet has been shipped and is on its way to you."}
+                  {order.status === "DELIVERY_TIME" && "Your carpet is ready for delivery or shipping."}
+                  {order.status === "FIRST_REVISED_DELIVERY_DATE" && "First revised delivery date is set for your order."}
+                  {order.status === "SECOND_REVISED_DELIVERY_DATE" && "Second revised delivery date is set for your order."}
                 </p>
               </div>
             </div>

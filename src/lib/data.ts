@@ -12,24 +12,30 @@ const getRandomDate = (start: Date, end: Date): string => {
   return randomDate.toISOString().split('T')[0];
 };
 
+const ORDER_STATUSES: OrderStatus[] = [
+  'ORDER_APPROVAL',
+  'RENDERING',
+  'DYEING',
+  'DYEING_READY',
+  'WAITING_FOR_LOOM',
+  'ONLOOM',
+  'ONLOOM_PROGRESS',
+  'OFFLOOM',
+  'FINISHING',
+  'DELIVERY_TIME',
+  'FIRST_REVISED_DELIVERY_DATE',
+  'SECOND_REVISED_DELIVERY_DATE'
+];
+
 const createOrderTimeline = (status: Order['status']): Order['timeline'] => {
   const now = new Date();
   const twoWeeksAgo = new Date(now);
   twoWeeksAgo.setDate(now.getDate() - 14);
-  
-  const statuses: OrderStatus[] = [
-    'ORDER_APPROVAL',
-    'RENDERING',
-    'DYEING',
-    'DYEING_READY',
-    'WAITING_FOR_LOOM',
-    'ONLOOM',
-    'ONLOOM_PROGRESS',
-    'OFFLOOM'
-  ];
-  
+
+  const statuses: OrderStatus[] = ORDER_STATUSES;
+
   const currentStatusIndex = statuses.indexOf(status);
-  
+
   return statuses.map((stage, index) => {
     if (index <= currentStatusIndex) {
       return {
@@ -212,6 +218,30 @@ export const getStatusDisplayInfo = (
         label: "Offloom",
         color: "red",
         description: "Carpet has come off the loom for finishing."
+      };
+    case 'FINISHING':
+      return {
+        label: "Finishing",
+        color: "yellow",
+        description: "Carpet is in finishing process (quality control, etc)."
+      };
+    case 'DELIVERY_TIME':
+      return {
+        label: "Delivery Time",
+        color: "pink",
+        description: "Carpet is ready for delivery."
+      };
+    case 'FIRST_REVISED_DELIVERY_DATE':
+      return {
+        label: "First Revised Delivery Date",
+        color: "cyan",
+        description: "First revised delivery date has been set."
+      };
+    case 'SECOND_REVISED_DELIVERY_DATE':
+      return {
+        label: "Second Revised Delivery Date",
+        color: "cyan",
+        description: "Second revised delivery date has been set."
       };
     default:
       return {

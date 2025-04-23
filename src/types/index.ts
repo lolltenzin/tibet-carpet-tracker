@@ -1,4 +1,5 @@
 
+// Update OrderStatus to match the requested statuses!
 export type ClientCode = 
   | 'WS'
   | 'LD'
@@ -18,7 +19,6 @@ export type ClientCode =
   | 'ADV'
   | 'BD';
 
-// UPDATED STATUSES
 export type OrderStatus = 
   | 'ORDER_APPROVAL'
   | 'RENDERING'
@@ -27,7 +27,11 @@ export type OrderStatus =
   | 'WAITING_FOR_LOOM'
   | 'ONLOOM'
   | 'ONLOOM_PROGRESS'
-  | 'OFFLOOM';
+  | 'OFFLOOM'
+  | 'FINISHING'
+  | 'DELIVERY_TIME'
+  | 'FIRST_REVISED_DELIVERY_DATE'
+  | 'SECOND_REVISED_DELIVERY_DATE';
 
 export interface User {
   id: string;

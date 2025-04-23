@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/Header";
@@ -10,15 +9,28 @@ import { Order, OrderStatus } from "@/types";
 import { getStatusDisplayInfo } from "@/lib/data";
 import { CheckCheck, Filter, Search } from "lucide-react";
 
+const STATUS_LIST: OrderStatus[] = [
+  "ORDER_APPROVAL",
+  "RENDERING",
+  "DYEING",
+  "DYEING_READY",
+  "WAITING_FOR_LOOM",
+  "ONLOOM",
+  "ONLOOM_PROGRESS",
+  "OFFLOOM",
+  "FINISHING",
+  "DELIVERY_TIME",
+  "FIRST_REVISED_DELIVERY_DATE",
+  "SECOND_REVISED_DELIVERY_DATE"
+];
+
 const Dashboard = () => {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "ALL">("ALL");
   
-  // Get orders for the logged-in client
   const clientOrders = user ? getOrdersByClient(user.clientCode) : [];
   
-  // Filter orders based on search query and status filter
   const filteredOrders = clientOrders.filter(order => {
     const matchesSearch = searchQuery === "" || 
       order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -34,10 +46,7 @@ const Dashboard = () => {
     return acc;
   }, {} as Record<OrderStatus, number>);
   
-  // Get total count of orders
   const totalOrders = clientOrders.length;
-  
-  // Get count of orders with delay
   const ordersWithDelay = clientOrders.filter(order => order.hasDelay).length;
 
   return (
@@ -52,7 +61,6 @@ const Dashboard = () => {
           </p>
         </div>
         
-        {/* Stats overview */}
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-8">
           <div className="bg-white rounded-lg border p-4 flex items-center gap-4">
             <div className="bg-tibet-red/10 p-2 rounded-full">
@@ -83,8 +91,8 @@ const Dashboard = () => {
               </svg>
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Exported</p>
-              <p className="text-2xl font-bold">{statusCounts.EXPORTED || 0}</p>
+              <p className="text-sm font-medium text-muted-foreground">Finished</p>
+              <p className="text-2xl font-bold">{statusCounts["FINISHING"] || 0}</p>
             </div>
           </div>
           
@@ -96,12 +104,13 @@ const Dashboard = () => {
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">In Production</p>
-              <p className="text-2xl font-bold">{totalOrders - (statusCounts.EXPORTED || 0)}</p>
+              <p className="text-2xl font-bold">
+                {totalOrders - (statusCounts["FINISHING"] || 0)}
+              </p>
             </div>
           </div>
         </div>
         
-        {/* Filters */}
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -123,7 +132,7 @@ const Dashboard = () => {
               All
             </Button>
             
-            {(["YARN_ISSUED", "DYEING", "ISSUED_TO_SUPPLIER", "CARPET_RECEIVED", "FINISHING", "EXPORTED"] as OrderStatus[]).map((status) => {
+            {STATUS_LIST.map((status) => {
               const { label } = getStatusDisplayInfo(status);
               return (
                 <Button
