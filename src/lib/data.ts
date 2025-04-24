@@ -1,5 +1,5 @@
 
-import { Order, OrderStatus, ClientCode } from "@/types";
+import { Order, OrderStatus, ClientCode, User } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 
 // Status display information
@@ -72,6 +72,34 @@ export const getStatusDisplayInfo = (status: OrderStatus) => {
     color: "bg-gray-400",
     textColor: "text-gray-50"
   };
+};
+
+// Validate user credentials (temporary mock function)
+export const validateCredentials = (username: string, password: string): User | null => {
+  // Mock data for demonstration
+  const validUsers: Record<string, User> = {
+    "client1": {
+      id: "user1",
+      username: "client1",
+      clientCode: "TC",
+      clientName: "Tibet Carpet",
+      role: "client"
+    },
+    "client2": {
+      id: "user2",
+      username: "client2",
+      clientCode: "LC",
+      clientName: "Luxury Carpets",
+      role: "client"
+    }
+  };
+
+  // Simple validation
+  if (validUsers[username] && password === "password") {
+    return validUsers[username];
+  }
+
+  return null;
 };
 
 // Helper function to map database records to our Order type
