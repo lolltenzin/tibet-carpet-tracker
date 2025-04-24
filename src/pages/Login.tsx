@@ -95,8 +95,10 @@ const Login = () => {
           </form>
           
           <div className="mt-4 text-center text-sm text-muted-foreground">
-            <p>For demo access:</p>
-            <p>Username: <span className="font-medium">demo</span> | Password: <span className="font-medium">demo_pass</span></p>
+            <p>Available logins:</p>
+            <p>WS / PASSWORD</p>
+            <p>client1 / password</p>
+            <p>client2 / password</p>
           </div>
         </div>
         

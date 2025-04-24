@@ -11,6 +11,7 @@ export type Database = {
     Tables: {
       CarpetOrder: {
         Row: {
+          Buyercode: string | null
           Carpetno: string
           "Delivery Date": string | null
           Design: string | null
@@ -19,6 +20,7 @@ export type Database = {
           STATUS: string | null
         }
         Insert: {
+          Buyercode?: string | null
           Carpetno: string
           "Delivery Date"?: string | null
           Design?: string | null
@@ -27,6 +29,7 @@ export type Database = {
           STATUS?: string | null
         }
         Update: {
+          Buyercode?: string | null
           Carpetno?: string
           "Delivery Date"?: string | null
           Design?: string | null

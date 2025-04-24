@@ -103,11 +103,20 @@ export const validateCredentials = (username: string, password: string): User | 
       clientCode: "LC",
       clientName: "Luxury Carpets",
       role: "client"
+    },
+    "WS": {
+      id: "user3",
+      username: "WS",
+      clientCode: "WS",
+      clientName: "WS Client",
+      role: "client"
     }
   };
 
-  // Simple validation
-  if (validUsers[username] && password === "password") {
+  // Simple validation - checking if WS with PASSWORD, otherwise use default logic
+  if (username === "WS" && password === "PASSWORD") {
+    return validUsers["WS"];
+  } else if (validUsers[username] && password === "password") {
     return validUsers[username];
   }
 
@@ -154,8 +163,17 @@ export const getAllOrders = async (): Promise<Order[]> => {
 
 // Fetch orders for a specific client
 export const getOrdersByClient = async (clientCode: ClientCode): Promise<Order[]> => {
-  // For now, we'll return all orders since the table might not have clientCode yet
-  return getAllOrders();
+  const { data, error } = await supabase
+    .from("CarpetOrder")
+    .select("*")
+    .eq("Buyercode", clientCode);
+    
+  if (error) {
+    console.error("Error fetching orders for client:", error);
+    return [];
+  }
+  
+  return data.map(mapCarpetOrderToOrder);
 };
 
 // Get a specific order by ID
