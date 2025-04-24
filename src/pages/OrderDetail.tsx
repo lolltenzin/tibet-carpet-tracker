@@ -1,3 +1,5 @@
+
+import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/Header";
@@ -5,13 +7,55 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { StatusTimeline } from "@/components/StatusTimeline";
 import { Button } from "@/components/ui/button";
 import { getOrderById } from "@/lib/data";
-import { ArrowLeft, Calendar, Clock } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, Loader2 } from "lucide-react";
+import { Order } from "@/types";
+import { useToast } from "@/hooks/use-toast";
 
 const OrderDetail = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const { user } = useAuth();
-  const order = orderId ? getOrderById(orderId) : undefined;
+  const [order, setOrder] = useState<Order | undefined>(undefined);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchOrder = async () => {
+      if (!orderId) return;
+
+      setIsLoading(true);
+      try {
+        const orderData = await getOrderById(orderId);
+        setOrder(orderData);
+      } catch (error) {
+        console.error("Error fetching order:", error);
+        toast({
+          title: "Error loading order",
+          description: "Unable to load order details. Please try again later.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchOrder();
+  }, [orderId, toast]);
+
   const hasAccess = order && user && order.clientCode === user.clientCode;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 container py-6 flex items-center justify-center">
+          <div className="flex flex-col items-center">
+            <Loader2 className="h-8 w-8 animate-spin text-tibet-red mb-2" />
+            <p>Loading order details...</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   if (!order || !hasAccess) {
     return (
