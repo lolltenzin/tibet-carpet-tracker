@@ -50,17 +50,19 @@ const Login = () => {
                 <User className="w-4 h-4 text-muted-foreground" />
                 Client Identifier
               </Label>
-              <Input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                placeholder="Enter your client code"
-                disabled={isSubmitting}
-                className="pl-10"
-                icon={<User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />}
-              />
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                  placeholder="Enter your client code"
+                  disabled={isSubmitting}
+                  className="pl-10"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -68,17 +70,19 @@ const Login = () => {
                 <Lock className="w-4 h-4 text-muted-foreground" />
                 Password
               </Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="Enter your password"
-                disabled={isSubmitting}
-                className="pl-10"
-                icon={<Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />}
-              />
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  placeholder="Enter your password"
+                  disabled={isSubmitting}
+                  className="pl-10"
+                />
+              </div>
             </div>
 
             <Button 
