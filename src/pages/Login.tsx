@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Navigate } from "react-router-dom";
 import { Link } from "react-router-dom";
+import { Lock, User } from "lucide-react";
 
 const Login = () => {
   const [username, setUsername] = useState("");
@@ -38,14 +39,17 @@ const Login = () => {
               <span className="font-bold text-white text-xl">TC</span>
             </div>
           </Link>
-          <h1 className="text-2xl font-bold">Tibet Carpet Client Portal</h1>
-          <p className="text-muted-foreground">Secure Access to Your Carpet Order Tracking</p>
+          <h1 className="text-2xl font-bold">Tibet Carpet</h1>
+          <p className="text-muted-foreground">Secure Order Management</p>
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-md border">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Client Identifier</Label>
+              <Label htmlFor="username" className="flex items-center gap-2">
+                <User className="w-4 h-4 text-muted-foreground" />
+                Client Identifier
+              </Label>
               <Input
                 id="username"
                 type="text"
@@ -54,11 +58,16 @@ const Login = () => {
                 required
                 placeholder="Enter your client code"
                 disabled={isSubmitting}
+                className="pl-10"
+                icon={<User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="flex items-center gap-2">
+                <Lock className="w-4 h-4 text-muted-foreground" />
+                Password
+              </Label>
               <Input
                 id="password"
                 type="password"
@@ -67,6 +76,8 @@ const Login = () => {
                 required
                 placeholder="Enter your password"
                 disabled={isSubmitting}
+                className="pl-10"
+                icon={<Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />}
               />
             </div>
 
@@ -96,4 +107,3 @@ const Login = () => {
 };
 
 export default Login;
-
