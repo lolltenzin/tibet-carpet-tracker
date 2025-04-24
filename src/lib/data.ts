@@ -1,4 +1,3 @@
-
 import { Order, OrderStatus, ClientCode, User } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -8,69 +7,82 @@ export const getStatusDisplayInfo = (status: OrderStatus) => {
     "ORDER_APPROVAL": { 
       label: "Order Approval", 
       color: "bg-slate-400",
-      textColor: "text-slate-50"
+      textColor: "text-slate-50",
+      description: "Order has been received and is awaiting approval"
     },
     "RENDERING": {
       label: "Rendering",
       color: "bg-sky-400",
-      textColor: "text-sky-50"
+      textColor: "text-sky-50",
+      description: "Design is being rendered"
     },
     "DYEING": {
       label: "Dyeing", 
       color: "bg-indigo-400",
-      textColor: "text-indigo-50"
+      textColor: "text-indigo-50",
+      description: "Materials are being dyed to specification"
     },
     "DYEING_READY": {
       label: "Dyeing Ready", 
       color: "bg-violet-400",
-      textColor: "text-violet-50"
+      textColor: "text-violet-50",
+      description: "Dyeing process is complete"
     },
     "WAITING_FOR_LOOM": {
       label: "Waiting for Loom", 
       color: "bg-purple-400",
-      textColor: "text-purple-50"
+      textColor: "text-purple-50",
+      description: "Materials are ready and waiting for loom availability"
     },
     "ONLOOM": {
       label: "On Loom", 
       color: "bg-fuchsia-400",
-      textColor: "text-fuchsia-50"
+      textColor: "text-fuchsia-50",
+      description: "Carpet is being woven on the loom"
     },
     "ONLOOM_PROGRESS": {
       label: "On Loom Progress", 
       color: "bg-pink-400",
-      textColor: "text-pink-50"
+      textColor: "text-pink-50",
+      description: "Weaving is in progress"
     },
     "OFFLOOM": {
       label: "Off Loom",
       color: "bg-rose-400",
-      textColor: "text-rose-50"
+      textColor: "text-rose-50",
+      description: "Carpet has been removed from the loom"
     },
     "FINISHING": {
       label: "Finishing", 
       color: "bg-green-400",
-      textColor: "text-green-50"
+      textColor: "text-green-50",
+      description: "Final touches and quality control"
     },
     "DELIVERY_TIME": {
       label: "Ready for Delivery", 
       color: "bg-emerald-400",
-      textColor: "text-emerald-50"
+      textColor: "text-emerald-50",
+      description: "Carpet is ready to be delivered"
     },
     "FIRST_REVISED_DELIVERY_DATE": {
       label: "First Revised Date", 
       color: "bg-amber-400",
-      textColor: "text-amber-50"
+      textColor: "text-amber-50",
+      description: "Delivery date has been revised once"
     },
     "SECOND_REVISED_DELIVERY_DATE": {
       label: "Second Revised Date", 
       color: "bg-red-400",
-      textColor: "text-red-50"
+      textColor: "text-red-50",
+      description: "Delivery date has been revised twice"
     }
   };
   
   return statusMap[status] || {
     label: status,
     color: "bg-gray-400",
-    textColor: "text-gray-50"
+    textColor: "text-gray-50",
+    description: "Status information unavailable"
   };
 };
 

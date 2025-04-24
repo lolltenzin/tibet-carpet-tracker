@@ -17,7 +17,8 @@ export type ClientCode =
   | 'RGD'
   | 'NB'
   | 'ADV'
-  | 'BD';
+  | 'BD'
+  | 'LC';  // Added 'LC' to support Luxury Carpets client
 
 export type OrderStatus = 
   | 'ORDER_APPROVAL'
@@ -38,6 +39,7 @@ export interface User {
   username: string;
   clientCode: ClientCode;
   clientName: string;
+  role: string; // Added role property to User interface
 }
 
 export interface Order {
