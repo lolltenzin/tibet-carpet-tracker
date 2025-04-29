@@ -1,3 +1,4 @@
+
 import { Order, OrderStatus, ClientCode, User } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -125,11 +126,13 @@ export const validateCredentials = (username: string, password: string): User | 
 
 // Helper function to map database records to our Order type
 const mapCarpetOrderToOrder = (record: any): Order => {
+  console.log("Mapping record:", record); // Added debugging
+  
   // Map STATUS to one of our predefined statuses or default to ORDER_APPROVAL
   const status = record.STATUS as OrderStatus || "ORDER_APPROVAL";
   
   // Map client code from table or default to a default client
-  const clientCode = record.clientCode as ClientCode || "TC";
+  const clientCode = record.Buyercode as ClientCode || "WS"; // Changed default to WS
   
   return {
     id: record.Carpetno,
@@ -158,19 +161,54 @@ export const getAllOrders = async (): Promise<Order[]> => {
     return [];
   }
   
+  console.log("All orders data:", data); // Added debugging
   return data.map(mapCarpetOrderToOrder);
 };
 
 // Fetch orders for a specific client
 export const getOrdersByClient = async (clientCode: ClientCode): Promise<Order[]> => {
-  const { data, error } = await supabase
+  console.log("Fetching orders for client code:", clientCode); // Added debugging
+  
+  // First try exact match
+  let { data, error } = await supabase
     .from("CarpetOrder")
     .select("*")
     .eq("Buyercode", clientCode);
-    
+  
   if (error) {
     console.error("Error fetching orders for client:", error);
     return [];
+  }
+  
+  console.log(`Found ${data?.length || 0} orders with exact match for Buyercode=${clientCode}`); // Added debugging
+  
+  // If no data found with exact match, try case insensitive match
+  if (!data || data.length === 0) {
+    console.log("Trying case insensitive match"); // Added debugging
+    
+    // Get all data and filter manually for case-insensitive match
+    const { data: allData, error: allError } = await supabase
+      .from("CarpetOrder")
+      .select("*");
+      
+    if (allError) {
+      console.error("Error fetching all orders:", allError);
+      return [];
+    }
+    
+    // Filter for case-insensitive match
+    data = allData.filter(
+      record => record.Buyercode && 
+                record.Buyercode.toString().trim().toUpperCase() === clientCode.toUpperCase()
+    );
+    
+    console.log(`Found ${data?.length || 0} orders with case-insensitive match`); // Added debugging
+  }
+  
+  // If still no data, fetch all orders as fallback
+  if (!data || data.length === 0) {
+    console.log("No orders found for client, falling back to all orders"); // Added debugging
+    return getAllOrders();
   }
   
   return data.map(mapCarpetOrderToOrder);

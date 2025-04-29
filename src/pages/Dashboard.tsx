@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { getOrdersByClient } from "@/lib/data";
 import { Order, OrderStatus } from "@/types";
 import { getStatusDisplayInfo } from "@/lib/data";
-import { CheckCheck, Filter, Search, Loader2 } from "lucide-react";
+import { CheckCheck, Filter, Search, Loader2, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const STATUS_LIST: OrderStatus[] = [
@@ -32,18 +32,32 @@ const Dashboard = () => {
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "ALL">("ALL");
   const [clientOrders, setClientOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     const fetchOrders = async () => {
       setIsLoading(true);
+      setDebugInfo(null);
+      
       try {
         if (user) {
+          console.log("Current user:", user);
+          setDebugInfo(`Fetching orders for client: ${user.clientCode}`);
+          
           const orders = await getOrdersByClient(user.clientCode);
           setClientOrders(orders);
+          
+          if (orders.length === 0) {
+            setDebugInfo(`No orders found for client code: ${user.clientCode}. Please check your database.`);
+          } else {
+            setDebugInfo(`Found ${orders.length} orders for client code: ${user.clientCode}`);
+            setTimeout(() => setDebugInfo(null), 3000);
+          }
         }
       } catch (error) {
         console.error("Error fetching orders:", error);
+        setDebugInfo(`Error loading orders: ${error instanceof Error ? error.message : String(error)}`);
         toast({
           title: "Error loading orders",
           description: "Unable to load your orders. Please try again later.",
@@ -85,6 +99,11 @@ const Dashboard = () => {
           <p className="text-muted-foreground">
             Track the status of your carpets through the production process.
           </p>
+          {debugInfo && (
+            <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700">
+              {debugInfo}
+            </div>
+          )}
         </div>
         
         {isLoading ? (
@@ -182,7 +201,25 @@ const Dashboard = () => {
               </div>
             </div>
             
-            {filteredOrders.length > 0 ? (
+            {clientOrders.length === 0 ? (
+              <div className="text-center py-12 border rounded-lg bg-orange-50 border-orange-200">
+                <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 mb-4">
+                  <AlertTriangle className="h-6 w-6 text-orange-500" />
+                </div>
+                <h3 className="text-lg font-medium">No Orders Found</h3>
+                <p className="text-muted-foreground mt-2 max-w-md mx-auto">
+                  We couldn't find any orders for client code: <strong>{user?.clientCode}</strong>
+                </p>
+                <div className="mt-4 text-sm text-slate-600 p-4 bg-slate-50 rounded-md max-w-md mx-auto">
+                  <p className="font-bold">Troubleshooting Tips:</p>
+                  <ul className="mt-2 list-disc text-left pl-5">
+                    <li>Check that you have records in the CarpetOrder table</li>
+                    <li>Verify that the Buyercode column has the value "WS"</li>
+                    <li>Make sure the records have values for Carpetno and other required fields</li>
+                  </ul>
+                </div>
+              </div>
+            ) : filteredOrders.length > 0 ? (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {filteredOrders.map((order) => (
                   <OrderCard key={order.id} order={order} />
@@ -193,11 +230,9 @@ const Dashboard = () => {
                 <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-4">
                   <Filter className="h-6 w-6 text-muted-foreground" />
                 </div>
-                <h3 className="text-lg font-medium">No orders found</h3>
+                <h3 className="text-lg font-medium">No matching orders found</h3>
                 <p className="text-muted-foreground mt-2">
-                  {searchQuery || statusFilter !== "ALL" 
-                    ? "Try adjusting your search or filters" 
-                    : "You don't have any orders at the moment"}
+                  Try adjusting your search or filters
                 </p>
               </div>
             )}
