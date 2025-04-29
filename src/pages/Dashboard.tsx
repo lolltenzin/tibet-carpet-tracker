@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { getOrdersByClient, getAllOrders } from "@/lib/data";
 import { Order, OrderStatus } from "@/types";
 import { getStatusDisplayInfo } from "@/lib/data";
-import { CheckCheck, Filter, Search, Loader2, AlertTriangle, Database } from "lucide-react";
+import { CheckCheck, Filter, Search, Loader2, AlertTriangle, Database, Refresh } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,48 +37,51 @@ const Dashboard = () => {
   const [rawRecords, setRawRecords] = useState<any[]>([]);
   const { toast } = useToast();
   const [showDebugView, setShowDebugView] = useState(false);
+  const [databaseStatus, setDatabaseStatus] = useState<'unknown' | 'connected' | 'error'>('unknown');
+
+  const fetchOrders = async () => {
+    setIsLoading(true);
+    setDebugInfo(null);
+    
+    try {
+      if (user) {
+        console.log("Current user:", user);
+        setDebugInfo(`Fetching orders for client: ${user.clientCode}`);
+        
+        // Get raw records for debugging
+        const { data: rawData } = await supabase
+          .from("CarpetOrder")
+          .select("*")
+          .limit(10);
+        
+        setRawRecords(rawData || []);
+        setDatabaseStatus(rawData !== null ? 'connected' : 'error');
+        
+        const orders = await getOrdersByClient(user.clientCode);
+        setClientOrders(orders);
+        
+        if (orders.length === 0) {
+          setDebugInfo(`No orders found for client code: ${user.clientCode}. Please check your database.`);
+        } else {
+          setDebugInfo(`Found ${orders.length} orders for client code: ${user.clientCode}`);
+          setTimeout(() => setDebugInfo(null), 3000);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      setDebugInfo(`Error loading orders: ${error instanceof Error ? error.message : String(error)}`);
+      toast({
+        title: "Error loading orders",
+        description: "Unable to load your orders. Please try again later.",
+        variant: "destructive"
+      });
+      setDatabaseStatus('error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchOrders = async () => {
-      setIsLoading(true);
-      setDebugInfo(null);
-      
-      try {
-        if (user) {
-          console.log("Current user:", user);
-          setDebugInfo(`Fetching orders for client: ${user.clientCode}`);
-          
-          // Get raw records for debugging
-          const { data: rawData } = await supabase
-            .from("CarpetOrder")
-            .select("*")
-            .limit(10);
-          
-          setRawRecords(rawData || []);
-          
-          const orders = await getOrdersByClient(user.clientCode);
-          setClientOrders(orders);
-          
-          if (orders.length === 0) {
-            setDebugInfo(`No orders found for client code: ${user.clientCode}. Please check your database.`);
-          } else {
-            setDebugInfo(`Found ${orders.length} orders for client code: ${user.clientCode}`);
-            setTimeout(() => setDebugInfo(null), 3000);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching orders:", error);
-        setDebugInfo(`Error loading orders: ${error instanceof Error ? error.message : String(error)}`);
-        toast({
-          title: "Error loading orders",
-          description: "Unable to load your orders. Please try again later.",
-          variant: "destructive"
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchOrders();
   }, [user, toast]);
   
@@ -112,20 +115,37 @@ const Dashboard = () => {
               Track the status of your carpets through the production process.
             </p>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => setShowDebugView(!showDebugView)}
-            className="flex items-center gap-2"
-          >
-            <Database className="h-4 w-4" />
-            {showDebugView ? "Hide Debug View" : "Show Debug View"}
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={fetchOrders}
+              className="flex items-center gap-2"
+            >
+              <Refresh className="h-4 w-4" />
+              Refresh Data
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setShowDebugView(!showDebugView)}
+              className="flex items-center gap-2"
+            >
+              <Database className="h-4 w-4" />
+              {showDebugView ? "Hide Debug View" : "Show Debug View"}
+            </Button>
+          </div>
         </div>
         
         {debugInfo && (
           <div className="mt-2 mb-4 p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700">
             {debugInfo}
+          </div>
+        )}
+        
+        {databaseStatus === 'error' && (
+          <div className="mt-2 mb-4 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+            Database connection issue detected. Please check your Supabase connection and permissions.
           </div>
         )}
         
@@ -138,6 +158,23 @@ const Dashboard = () => {
                 <pre className="text-xs bg-slate-50 p-2 rounded overflow-auto">
                   {JSON.stringify(user, null, 2)}
                 </pre>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-semibold mb-2">Database Connection Status:</h3>
+                <div className={`px-2 py-1 rounded inline-flex items-center ${
+                  databaseStatus === 'connected' ? 'bg-green-100 text-green-800' :
+                  databaseStatus === 'error' ? 'bg-red-100 text-red-800' :
+                  'bg-yellow-100 text-yellow-800'
+                }`}>
+                  <span className={`w-2 h-2 rounded-full mr-2 ${
+                    databaseStatus === 'connected' ? 'bg-green-500' :
+                    databaseStatus === 'error' ? 'bg-red-500' :
+                    'bg-yellow-500'
+                  }`}></span>
+                  {databaseStatus === 'connected' ? 'Connected' :
+                   databaseStatus === 'error' ? 'Error' : 'Unknown'}
+                </div>
               </div>
               
               <div>
@@ -160,7 +197,7 @@ const Dashboard = () => {
                         {rawRecords.map((record, idx) => (
                           <TableRow key={idx}>
                             <TableCell>{record.Carpetno || 'N/A'}</TableCell>
-                            <TableCell className={record.Buyercode === 'WS' ? 'bg-green-100' : ''}>
+                            <TableCell className={record.Buyercode === user?.clientCode ? 'bg-green-100' : ''}>
                               {record.Buyercode || 'N/A'}
                             </TableCell>
                             <TableCell>{record.Design || 'N/A'}</TableCell>
@@ -176,6 +213,19 @@ const Dashboard = () => {
                 ) : (
                   <p className="text-sm text-red-500">No records found in CarpetOrder table!</p>
                 )}
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-semibold mb-2">Database Troubleshooting:</h3>
+                <div className="bg-slate-50 p-3 rounded text-sm">
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Make sure your CarpetOrder table exists in Supabase</li>
+                    <li>Check that <strong>Buyercode column exists</strong> and contains records with value "WS"</li>
+                    <li>Verify that <strong>Carpetno column exists</strong> and has values (this is used as the order ID)</li>
+                    <li>Ensure proper permissions are set for anonymous access to the CarpetOrder table</li>
+                    <li>If database issues persist, the app will use sample data as a fallback</li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
@@ -292,6 +342,7 @@ const Dashboard = () => {
                     <li>Verify that the Buyercode column <strong>exactly equals "WS"</strong> (case sensitive, no spaces)</li>
                     <li>Make sure the records have values for Carpetno and other required fields</li>
                     <li>Try toggling "Show Debug View" to see your raw database records</li>
+                    <li>Refresh the page and check the debug output for more information</li>
                   </ul>
                 </div>
               </div>
