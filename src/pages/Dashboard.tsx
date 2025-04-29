@@ -1,15 +1,16 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/Header";
 import { OrderCard } from "@/components/OrderCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getOrdersByClient } from "@/lib/data";
+import { getOrdersByClient, getAllOrders } from "@/lib/data";
 import { Order, OrderStatus } from "@/types";
 import { getStatusDisplayInfo } from "@/lib/data";
-import { CheckCheck, Filter, Search, Loader2, AlertTriangle } from "lucide-react";
+import { CheckCheck, Filter, Search, Loader2, AlertTriangle, Database } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { supabase } from "@/integrations/supabase/client";
 
 const STATUS_LIST: OrderStatus[] = [
   "ORDER_APPROVAL",
@@ -33,7 +34,9 @@ const Dashboard = () => {
   const [clientOrders, setClientOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
+  const [rawRecords, setRawRecords] = useState<any[]>([]);
   const { toast } = useToast();
+  const [showDebugView, setShowDebugView] = useState(false);
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -44,6 +47,14 @@ const Dashboard = () => {
         if (user) {
           console.log("Current user:", user);
           setDebugInfo(`Fetching orders for client: ${user.clientCode}`);
+          
+          // Get raw records for debugging
+          const { data: rawData } = await supabase
+            .from("CarpetOrder")
+            .select("*")
+            .limit(10);
+          
+          setRawRecords(rawData || []);
           
           const orders = await getOrdersByClient(user.clientCode);
           setClientOrders(orders);
@@ -94,17 +105,81 @@ const Dashboard = () => {
       <Header />
       
       <main className="flex-1 container py-6">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold mb-2">Order Dashboard</h1>
-          <p className="text-muted-foreground">
-            Track the status of your carpets through the production process.
-          </p>
-          {debugInfo && (
-            <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700">
-              {debugInfo}
-            </div>
-          )}
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold mb-2">Order Dashboard</h1>
+            <p className="text-muted-foreground">
+              Track the status of your carpets through the production process.
+            </p>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setShowDebugView(!showDebugView)}
+            className="flex items-center gap-2"
+          >
+            <Database className="h-4 w-4" />
+            {showDebugView ? "Hide Debug View" : "Show Debug View"}
+          </Button>
         </div>
+        
+        {debugInfo && (
+          <div className="mt-2 mb-4 p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700">
+            {debugInfo}
+          </div>
+        )}
+        
+        {showDebugView && (
+          <div className="mb-6 border rounded-md overflow-hidden">
+            <div className="bg-muted p-3 font-medium">Database Debug View</div>
+            <div className="p-4 space-y-4">
+              <div>
+                <h3 className="text-sm font-semibold mb-2">User Info:</h3>
+                <pre className="text-xs bg-slate-50 p-2 rounded overflow-auto">
+                  {JSON.stringify(user, null, 2)}
+                </pre>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-semibold mb-2">Raw CarpetOrder Records (First 10):</h3>
+                {rawRecords.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <Table className="text-xs">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Carpetno</TableHead>
+                          <TableHead>Buyercode</TableHead>
+                          <TableHead>Design</TableHead>
+                          <TableHead>Size</TableHead>
+                          <TableHead>STATUS</TableHead>
+                          <TableHead>Order issued</TableHead>
+                          <TableHead>Delivery Date</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {rawRecords.map((record, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell>{record.Carpetno || 'N/A'}</TableCell>
+                            <TableCell className={record.Buyercode === 'WS' ? 'bg-green-100' : ''}>
+                              {record.Buyercode || 'N/A'}
+                            </TableCell>
+                            <TableCell>{record.Design || 'N/A'}</TableCell>
+                            <TableCell>{record.Size || 'N/A'}</TableCell>
+                            <TableCell>{record.STATUS || 'N/A'}</TableCell>
+                            <TableCell>{record["Order issued"] || 'N/A'}</TableCell>
+                            <TableCell>{record["Delivery Date"] || 'N/A'}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <p className="text-sm text-red-500">No records found in CarpetOrder table!</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
         
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
@@ -214,8 +289,9 @@ const Dashboard = () => {
                   <p className="font-bold">Troubleshooting Tips:</p>
                   <ul className="mt-2 list-disc text-left pl-5">
                     <li>Check that you have records in the CarpetOrder table</li>
-                    <li>Verify that the Buyercode column has the value "WS"</li>
+                    <li>Verify that the Buyercode column <strong>exactly equals "WS"</strong> (case sensitive, no spaces)</li>
                     <li>Make sure the records have values for Carpetno and other required fields</li>
+                    <li>Try toggling "Show Debug View" to see your raw database records</li>
                   </ul>
                 </div>
               </div>

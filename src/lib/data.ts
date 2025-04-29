@@ -205,9 +205,22 @@ export const getOrdersByClient = async (clientCode: ClientCode): Promise<Order[]
     console.log(`Found ${data?.length || 0} orders with case-insensitive match`); // Added debugging
   }
   
-  // If still no data, fetch all orders as fallback
+  // If still no data, dump the first few records to see what we have
   if (!data || data.length === 0) {
-    console.log("No orders found for client, falling back to all orders"); // Added debugging
+    const { data: sampleData } = await supabase
+      .from("CarpetOrder")
+      .select("*")
+      .limit(5);
+      
+    if (sampleData && sampleData.length > 0) {
+      console.log("Sample of available CarpetOrder records:", sampleData);
+      console.log("Available Buyercodes:", sampleData.map(r => r.Buyercode));
+    } else {
+      console.log("No CarpetOrder records found at all.");
+    }
+    
+    // Fall back to getting all orders for debugging purposes
+    console.log("No orders found for client, falling back to all orders");
     return getAllOrders();
   }
   
