@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/Header";
@@ -7,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { getOrdersByClient, getAllOrders } from "@/lib/data";
 import { Order, OrderStatus } from "@/types";
 import { getStatusDisplayInfo } from "@/lib/data";
-import { CheckCheck, Filter, Search, Loader2, AlertTriangle, Database, Refresh } from "lucide-react";
+import { CheckCheck, Filter, Search, Loader2, AlertTriangle, Database, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
@@ -122,7 +123,7 @@ const Dashboard = () => {
               onClick={fetchOrders}
               className="flex items-center gap-2"
             >
-              <Refresh className="h-4 w-4" />
+              <RefreshCw className="h-4 w-4" />
               Refresh Data
             </Button>
             <Button 
