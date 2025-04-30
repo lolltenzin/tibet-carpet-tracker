@@ -123,12 +123,39 @@ export const validateCredentials = (username: string, password: string): User | 
   return null;
 };
 
+// Helper function to normalize status from database
+const normalizeStatus = (status: string): OrderStatus => {
+  // Convert to uppercase and replace spaces with underscores
+  const normalized = status.trim().toUpperCase().replace(/\s+/g, '_');
+  
+  // Map common variations to our defined OrderStatus types
+  const statusMap: Record<string, OrderStatus> = {
+    'ORDER_APPROVAL': 'ORDER_APPROVAL',
+    'ORDER_ISSUED': 'ORDER_APPROVAL',
+    'RENDERING': 'RENDERING',
+    'DYEING': 'DYEING',
+    'DYEING_READY': 'DYEING_READY',
+    'WAITING_FOR_LOOM': 'WAITING_FOR_LOOM',
+    'ONLOOM': 'ONLOOM',
+    'ONLOOM_PROGRESS': 'ONLOOM_PROGRESS',
+    'OFFLOOM': 'OFFLOOM',
+    'FINISHING': 'FINISHING',
+    'DELIVERY_TIME': 'DELIVERY_TIME',
+    'DELIVERY': 'DELIVERY_TIME',
+    'FIRST_REVISED_DELIVERY_DATE': 'FIRST_REVISED_DELIVERY_DATE',
+    'SECOND_REVISED_DELIVERY_DATE': 'SECOND_REVISED_DELIVERY_DATE'
+  };
+  
+  // Return the mapped status or default to ORDER_APPROVAL if not found
+  return statusMap[normalized] || 'ORDER_APPROVAL';
+};
+
 // Helper function to map database records to our Order type
 const mapCarpetOrderToOrder = (record: any): Order => {
   console.log("Mapping record:", record); // Added debugging
   
-  // Map STATUS to one of our predefined statuses or default to ORDER_APPROVAL
-  const status = record.STATUS as OrderStatus || "ORDER_APPROVAL";
+  // Map STATUS to one of our predefined statuses with normalization
+  const status = normalizeStatus(record.STATUS || "ORDER_APPROVAL");
   
   // Map client code from table or default to a default client
   const clientCode = record.Buyercode as ClientCode || "WS"; // Changed default to WS

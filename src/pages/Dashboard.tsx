@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/Header";
@@ -11,6 +12,12 @@ import { CheckCheck, Filter, Search, Loader2, AlertTriangle, Database, RefreshCw
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -23,6 +30,23 @@ const Dashboard = () => {
   const [dbConnectionStatus, setDbConnectionStatus] = useState<'checking' | 'connected' | 'error'>('checking');
   const [rawRecords, setRawRecords] = useState<any[]>([]);
   const { toast } = useToast();
+
+  // List of all possible order statuses to use in the filter
+  const allStatuses: Array<OrderStatus | "ALL"> = [
+    "ALL",
+    "ORDER_APPROVAL",
+    "RENDERING",
+    "DYEING",
+    "DYEING_READY",
+    "WAITING_FOR_LOOM",
+    "ONLOOM",
+    "ONLOOM_PROGRESS",
+    "OFFLOOM",
+    "FINISHING",
+    "DELIVERY_TIME",
+    "FIRST_REVISED_DELIVERY_DATE",
+    "SECOND_REVISED_DELIVERY_DATE"
+  ];
 
   // Function to check database connection
   const checkDbConnection = async () => {
@@ -208,11 +232,25 @@ const Dashboard = () => {
             />
             
             <div className="relative">
-              <Button variant="outline" className="md:ml-2 flex items-center gap-2">
-                <Filter className="h-4 w-4" />
-                Filter by Status
-              </Button>
-              {/* Implement a dropdown or popover for status filtering here */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="md:ml-2 flex items-center gap-2">
+                    <Filter className="h-4 w-4" />
+                    {filterStatus === "ALL" ? "Filter by Status" : getStatusDisplayInfo(filterStatus as OrderStatus).label}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56">
+                  {allStatuses.map((status) => (
+                    <DropdownMenuItem 
+                      key={status} 
+                      onClick={() => setFilterStatus(status)}
+                      className={filterStatus === status ? "bg-muted" : ""}
+                    >
+                      {status === "ALL" ? "All Statuses" : getStatusDisplayInfo(status as OrderStatus).label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
           
