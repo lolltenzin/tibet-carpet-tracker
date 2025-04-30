@@ -7,7 +7,7 @@ import { StatusTimeline } from "@/components/StatusTimeline";
 import { Button } from "@/components/ui/button";
 import { getOrderById } from "@/lib/data";
 import { ArrowLeft, Calendar, Clock, Loader2 } from "lucide-react";
-import { Order } from "@/types";
+import { Order, OrderStatus } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 
 const OrderDetail = () => {
@@ -42,10 +42,26 @@ const OrderDetail = () => {
 
   const hasAccess = order && user && (order.clientCode === user.clientCode || user.role === 'admin');
 
-  // Filter the timeline to only show relevant statuses
-  const relevantTimeline = order?.timeline.filter(item => 
-    ['ORDER_APPROVAL', 'YARN_ISSUED', 'DYEING', 'DYEING_READY', 'ONLOOM', 'OFFLOOM', 'FINISHING', 'DELIVERY_TIME'].includes(item.stage)
-  ) || [];
+  // Define the order of statuses for displaying in the timeline
+  const statusOrder: OrderStatus[] = [
+    'ORDER_APPROVAL',
+    'YARN_ISSUED',
+    'DYEING',
+    'DYEING_READY',
+    'ONLOOM',
+    'OFFLOOM',
+    'FINISHING',
+    'DELIVERY_TIME',
+  ];
+
+  // Filter the timeline to only show the specified status order
+  const relevantTimeline = order?.timeline
+    .filter(item => statusOrder.includes(item.stage))
+    .sort((a, b) => {
+      const aIndex = statusOrder.indexOf(a.stage);
+      const bIndex = statusOrder.indexOf(b.stage);
+      return aIndex - bIndex;
+    }) || [];
 
   if (isLoading) {
     return (

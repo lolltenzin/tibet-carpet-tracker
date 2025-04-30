@@ -174,7 +174,7 @@ const normalizeStatus = (status: string): OrderStatus => {
 
 // Build timeline based on current status
 const buildOrderTimeline = (status: OrderStatus, orderIssuedDate?: string, deliveryDate?: string): Order['timeline'] => {
-  // Get order information for all statuses
+  // Define the order of statuses for the timeline display
   const allStatuses: OrderStatus[] = [
     'ORDER_APPROVAL',
     'YARN_ISSUED',
