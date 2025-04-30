@@ -1,4 +1,3 @@
-
 import { Order, OrderStatus, ClientCode, User } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -154,140 +153,139 @@ const mapCarpetOrderToOrder = (record: any): Order => {
 export const getAllOrders = async (): Promise<Order[]> => {
   console.log("Fetching all orders");
   
-  // Let's try to directly check what's in the database table
-  const { data, error } = await supabase
-    .from("CarpetOrder")
-    .select("*");
+  try {
+    // With RLS policies now in place, this should work
+    const { data, error } = await supabase
+      .from("CarpetOrder")
+      .select("*");
+      
+    if (error) {
+      console.error("Error fetching all orders:", error);
+      return [];
+    }
     
-  if (error) {
-    console.error("Error fetching all orders:", error);
+    console.log("All orders data:", data);
+    
+    if (!data || data.length === 0) {
+      console.log("No orders found in the database. Creating a sample order.");
+      
+      // Create a sample order
+      try {
+        const { data: insertResult, error: insertError } = await supabase
+          .from("CarpetOrder")
+          .insert([
+            { 
+              Carpetno: "TEST-123", 
+              Buyercode: "WS", 
+              Design: "Test Design", 
+              Size: "3x5", 
+              STATUS: "ORDER_APPROVAL", 
+              "Order issued": new Date().toISOString(), 
+              "Delivery Date": new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() 
+            }
+          ])
+          .select();
+        
+        if (insertError) {
+          console.error("Error inserting test order:", insertError);
+        } else {
+          console.log("Successfully inserted test order:", insertResult);
+          return insertResult.map(mapCarpetOrderToOrder);
+        }
+      } catch (insertCatchError) {
+        console.error("Exception when inserting test order:", insertCatchError);
+      }
+      
+      return [];
+    }
+    
+    return data.map(mapCarpetOrderToOrder);
+  } catch (error) {
+    console.error("Exception in getAllOrders:", error);
     return [];
   }
-  
-  console.log("All orders data:", data); // Added debugging
-  
-  if (!data || data.length === 0) {
-    console.log("No orders found in the database at all");
-    
-    // Let's create a test order to see if we can write to the database
-    try {
-      const { data: insertResult, error: insertError } = await supabase
-        .from("CarpetOrder")
-        .insert([
-          { 
-            Carpetno: "TEST-123", 
-            Buyercode: "WS", 
-            Design: "Test Design", 
-            Size: "3x5", 
-            STATUS: "ORDER_APPROVAL", 
-            "Order issued": new Date().toISOString(), 
-            "Delivery Date": new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() 
-          }
-        ])
-        .select();
-      
-      if (insertError) {
-        console.error("Error inserting test order:", insertError);
-      } else {
-        console.log("Successfully inserted test order:", insertResult);
-      }
-    } catch (insertCatchError) {
-      console.error("Exception when inserting test order:", insertCatchError);
-    }
-  }
-  
-  return data?.map(mapCarpetOrderToOrder) || [];
 };
 
 // Fetch orders for a specific client
 export const getOrdersByClient = async (clientCode: ClientCode): Promise<Order[]> => {
-  console.log("Fetching orders for client code:", clientCode); // Added debugging
+  console.log("Fetching orders for client code:", clientCode);
   
-  // First try exact match
-  let { data, error } = await supabase
-    .from("CarpetOrder")
-    .select("*")
-    .eq("Buyercode", clientCode);
-  
-  if (error) {
-    console.error("Error fetching orders for client:", error);
-    return [];
-  }
-  
-  console.log(`Found ${data?.length || 0} orders with exact match for Buyercode=${clientCode}`); // Added debugging
-  
-  // If no data found with exact match, try case insensitive match
-  if (!data || data.length === 0) {
-    console.log("Trying case insensitive match"); // Added debugging
-    
-    // Get all data and filter manually for case-insensitive match
-    const { data: allData, error: allError } = await supabase
+  try {
+    // With RLS policies now in place, this should work
+    const { data, error } = await supabase
       .from("CarpetOrder")
-      .select("*");
-      
-    if (allError) {
-      console.error("Error fetching all orders:", allError);
+      .select("*")
+      .eq("Buyercode", clientCode);
+    
+    if (error) {
+      console.error("Error fetching orders for client:", error);
       return [];
     }
     
-    // Filter for case-insensitive match
-    data = allData.filter(
-      record => record.Buyercode && 
-                record.Buyercode.toString().trim().toUpperCase() === clientCode.toUpperCase()
-    );
+    console.log(`Found ${data?.length || 0} orders for Buyercode=${clientCode}`);
     
-    console.log(`Found ${data?.length || 0} orders with case-insensitive match`); // Added debugging
-  }
-  
-  // If still no data, try inserting a test record and verify database access
-  if (!data || data.length === 0) {
-    console.log("No orders found for client, verifying database access by inserting a test record");
-    
-    try {
-      const { data: insertResult, error: insertError } = await supabase
-        .from("CarpetOrder")
-        .insert([
-          { 
-            Carpetno: `TEST-${clientCode}-${Date.now()}`, 
-            Buyercode: clientCode, 
-            Design: "Test Design", 
-            Size: "3x5", 
-            STATUS: "ORDER_APPROVAL", 
-            "Order issued": new Date().toISOString(), 
-            "Delivery Date": new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() 
-          }
-        ])
-        .select();
+    if (!data || data.length === 0) {
+      console.log("No orders found with exact match, trying case insensitive match");
       
-      if (insertError) {
-        console.error("Error inserting test order:", insertError);
-        console.log("This could indicate a permission issue or that the table doesn't exist");
-      } else {
-        console.log("Successfully inserted test order:", insertResult);
+      // Get all data and filter manually for case-insensitive match
+      const { data: allData, error: allError } = await supabase
+        .from("CarpetOrder")
+        .select("*");
         
-        // Fetch again to verify we can read what we just wrote
-        const { data: refreshData, error: refreshError } = await supabase
-          .from("CarpetOrder")
-          .select("*")
-          .eq("Buyercode", clientCode);
-          
-        if (refreshError) {
-          console.error("Error re-fetching after insert:", refreshError);
-        } else {
-          console.log("After insert, found", refreshData?.length, "orders");
-          data = refreshData;
-        }
+      if (allError) {
+        console.error("Error fetching all orders:", allError);
+        return [];
       }
-    } catch (insertCatchError) {
-      console.error("Exception when inserting test order:", insertCatchError);
+      
+      // Filter for case-insensitive match
+      const matchingData = allData.filter(
+        record => record.Buyercode && 
+                  record.Buyercode.toString().trim().toUpperCase() === clientCode.toUpperCase()
+      );
+      
+      console.log(`Found ${matchingData?.length || 0} orders with case-insensitive match`);
+      
+      if (matchingData.length > 0) {
+        return matchingData.map(mapCarpetOrderToOrder);
+      }
+      
+      // If still no data, create a sample order for this client
+      console.log("Creating sample order for client:", clientCode);
+      
+      try {
+        const { data: insertResult, error: insertError } = await supabase
+          .from("CarpetOrder")
+          .insert([
+            { 
+              Carpetno: `${clientCode}-SAMPLE-${Date.now()}`, 
+              Buyercode: clientCode, 
+              Design: "Sample Design", 
+              Size: "3x5", 
+              STATUS: "ORDER_APPROVAL", 
+              "Order issued": new Date().toISOString(), 
+              "Delivery Date": new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() 
+            }
+          ])
+          .select();
+        
+        if (insertError) {
+          console.error("Error inserting sample order:", insertError);
+        } else {
+          console.log("Successfully inserted sample order:", insertResult);
+          return insertResult.map(mapCarpetOrderToOrder);
+        }
+      } catch (insertCatchError) {
+        console.error("Exception when inserting sample order:", insertCatchError);
+      }
     }
-  }
-  
-  // If we still have no data, fall back to sample data
-  if (!data || data.length === 0) {
-    console.log("No orders found, creating fallback sample orders");
     
-    // Create sample orders for demonstration
+    return data.map(mapCarpetOrderToOrder);
+  } catch (error) {
+    console.error("Exception in getOrdersByClient:", error);
+    
+    // Fall back to sample data
+    console.log("Falling back to sample data");
+    
     return [
       {
         id: "SAMPLE-001",
@@ -303,42 +301,28 @@ export const getOrdersByClient = async (clientCode: ClientCode): Promise<Order[]
           { stage: "FINISHING", date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), completed: false }
         ],
         estimatedCompletion: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-      },
-      {
-        id: "SAMPLE-002",
-        clientCode: clientCode,
-        orderNumber: "SAMPLE-002",
-        carpetName: "Sample Luxury Carpet",
-        dimensions: "8x10",
-        status: "DYEING",
-        hasDelay: true,
-        delayReason: "Material shortage",
-        timeline: [
-          { stage: "ORDER_APPROVAL", date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), completed: true },
-          { stage: "RENDERING", date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), completed: true },
-          { stage: "DYEING", date: new Date().toISOString(), completed: true },
-          { stage: "FINISHING", date: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString(), completed: false }
-        ],
-        estimatedCompletion: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString()
       }
     ];
   }
-  
-  return data.map(mapCarpetOrderToOrder);
 };
 
 // Get a specific order by ID
 export const getOrderById = async (orderId: string): Promise<Order | undefined> => {
-  const { data, error } = await supabase
-    .from("CarpetOrder")
-    .select("*")
-    .eq("Carpetno", orderId)
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from("CarpetOrder")
+      .select("*")
+      .eq("Carpetno", orderId)
+      .single();
+      
+    if (error) {
+      console.error("Error fetching order:", error);
+      return undefined;
+    }
     
-  if (error) {
-    console.error("Error fetching order:", error);
+    return mapCarpetOrderToOrder(data);
+  } catch (error) {
+    console.error("Exception in getOrderById:", error);
     return undefined;
   }
-  
-  return mapCarpetOrderToOrder(data);
 };
