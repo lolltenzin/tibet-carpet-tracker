@@ -1,3 +1,4 @@
+
 import { Order, OrderStatus, ClientCode, User } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -8,73 +9,92 @@ export const getStatusDisplayInfo = (status: OrderStatus) => {
       label: "Order Approval", 
       color: "bg-slate-400",
       textColor: "text-slate-50",
-      description: "Order has been received and is awaiting approval"
+      description: "Order has been received and is awaiting approval",
+      order: 1
+    },
+    "YARN_ISSUED": { 
+      label: "Yarn Issued", 
+      color: "bg-emerald-400",
+      textColor: "text-emerald-50",
+      description: "Raw materials have been issued for production",
+      order: 2
     },
     "RENDERING": {
       label: "Rendering",
       color: "bg-sky-400",
       textColor: "text-sky-50",
-      description: "Design is being rendered"
+      description: "Design is being rendered",
+      order: 3
     },
     "DYEING": {
       label: "Dyeing", 
       color: "bg-indigo-400",
       textColor: "text-indigo-50",
-      description: "Materials are being dyed to specification"
+      description: "Materials are being dyed to specification",
+      order: 4
     },
     "DYEING_READY": {
       label: "Dyeing Ready", 
       color: "bg-violet-400",
       textColor: "text-violet-50",
-      description: "Dyeing process is complete"
+      description: "Dyeing process is complete",
+      order: 5
     },
     "WAITING_FOR_LOOM": {
       label: "Waiting for Loom", 
       color: "bg-purple-400",
       textColor: "text-purple-50",
-      description: "Materials are ready and waiting for loom availability"
+      description: "Materials are ready and waiting for loom availability",
+      order: 6
     },
     "ONLOOM": {
       label: "On Loom", 
       color: "bg-fuchsia-400",
       textColor: "text-fuchsia-50",
-      description: "Carpet is being woven on the loom"
+      description: "Carpet is being woven on the loom",
+      order: 7
     },
     "ONLOOM_PROGRESS": {
       label: "On Loom Progress", 
       color: "bg-pink-400",
       textColor: "text-pink-50",
-      description: "Weaving is in progress"
+      description: "Weaving is in progress",
+      order: 8
     },
     "OFFLOOM": {
       label: "Off Loom",
       color: "bg-rose-400",
       textColor: "text-rose-50",
-      description: "Carpet has been removed from the loom"
+      description: "Carpet has been removed from the loom",
+      order: 9
     },
     "FINISHING": {
       label: "Finishing", 
       color: "bg-green-400",
       textColor: "text-green-50",
-      description: "Final touches and quality control"
+      description: "Final touches and quality control",
+      order: 10
     },
     "DELIVERY_TIME": {
       label: "Ready for Delivery", 
       color: "bg-emerald-400",
       textColor: "text-emerald-50",
-      description: "Carpet is ready to be delivered"
+      description: "Carpet is ready to be delivered",
+      order: 11
     },
     "FIRST_REVISED_DELIVERY_DATE": {
       label: "First Revised Date", 
       color: "bg-amber-400",
       textColor: "text-amber-50",
-      description: "Delivery date has been revised once"
+      description: "Delivery date has been revised once",
+      order: 12
     },
     "SECOND_REVISED_DELIVERY_DATE": {
       label: "Second Revised Date", 
       color: "bg-red-400",
       textColor: "text-red-50",
-      description: "Delivery date has been revised twice"
+      description: "Delivery date has been revised twice",
+      order: 13
     }
   };
   
@@ -82,7 +102,8 @@ export const getStatusDisplayInfo = (status: OrderStatus) => {
     label: status,
     color: "bg-gray-400",
     textColor: "text-gray-50",
-    description: "Status information unavailable"
+    description: "Status information unavailable",
+    order: 99
   };
 };
 
@@ -132,6 +153,7 @@ const normalizeStatus = (status: string): OrderStatus => {
   const statusMap: Record<string, OrderStatus> = {
     'ORDER_APPROVAL': 'ORDER_APPROVAL',
     'ORDER_ISSUED': 'ORDER_APPROVAL',
+    'YARN_ISSUED': 'YARN_ISSUED',
     'RENDERING': 'RENDERING',
     'DYEING': 'DYEING',
     'DYEING_READY': 'DYEING_READY',
@@ -150,6 +172,58 @@ const normalizeStatus = (status: string): OrderStatus => {
   return statusMap[normalized] || 'ORDER_APPROVAL';
 };
 
+// Build timeline based on current status
+const buildOrderTimeline = (status: OrderStatus, orderIssuedDate?: string, deliveryDate?: string): Order['timeline'] => {
+  // Get order information for all statuses
+  const allStatuses: OrderStatus[] = [
+    'ORDER_APPROVAL',
+    'YARN_ISSUED',
+    'DYEING',
+    'DYEING_READY',
+    'ONLOOM',
+    'OFFLOOM',
+    'FINISHING',
+    'DELIVERY_TIME'
+  ];
+  
+  // Get the index of the current status in our sequence
+  const currentStatusInfo = getStatusDisplayInfo(status);
+  const currentOrder = currentStatusInfo.order;
+  
+  // Build timeline with completion status based on the current status
+  return allStatuses.map(stage => {
+    const stageInfo = getStatusDisplayInfo(stage);
+    const isCompleted = stageInfo.order <= currentOrder;
+    
+    // Determine the date for this stage
+    let stageDate: string | undefined;
+    
+    if (stage === 'ORDER_APPROVAL' && orderIssuedDate) {
+      stageDate = orderIssuedDate;
+    } else if ((stage === 'DELIVERY_TIME' || stage === 'FINISHING') && deliveryDate) {
+      stageDate = deliveryDate;
+    } else if (isCompleted) {
+      // For completed stages without specific dates, use estimated dates based on progress
+      const today = new Date();
+      const orderDate = orderIssuedDate ? new Date(orderIssuedDate) : new Date();
+      const deliveryDateObj = deliveryDate ? new Date(deliveryDate) : new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+      
+      // Calculate a date between order and delivery based on the stage's position
+      const totalDuration = deliveryDateObj.getTime() - orderDate.getTime();
+      const stagePosition = allStatuses.indexOf(stage) / (allStatuses.length - 1);
+      const estimatedTime = orderDate.getTime() + (totalDuration * stagePosition);
+      
+      stageDate = new Date(estimatedTime).toISOString();
+    }
+    
+    return {
+      stage,
+      date: stageDate,
+      completed: isCompleted
+    };
+  });
+};
+
 // Helper function to map database records to our Order type
 const mapCarpetOrderToOrder = (record: any): Order => {
   console.log("Mapping record:", record); // Added debugging
@@ -160,6 +234,9 @@ const mapCarpetOrderToOrder = (record: any): Order => {
   // Map client code from table or default to a default client
   const clientCode = record.Buyercode as ClientCode || "WS"; // Changed default to WS
   
+  // Build the timeline based on the current status
+  const timeline = buildOrderTimeline(status, record["Order issued"], record["Delivery Date"]);
+  
   return {
     id: record.Carpetno,
     clientCode: clientCode,
@@ -168,10 +245,7 @@ const mapCarpetOrderToOrder = (record: any): Order => {
     dimensions: record.Size || "Unknown",
     status: status,
     hasDelay: false, // We can enhance this later based on delivery dates
-    timeline: [
-      { stage: "ORDER_APPROVAL", date: record["Order issued"] || new Date().toISOString(), completed: true },
-      { stage: "FINISHING", date: record["Delivery Date"] || new Date().toISOString(), completed: false }
-    ],
+    timeline: timeline,
     estimatedCompletion: record["Delivery Date"] || undefined
   };
 };
