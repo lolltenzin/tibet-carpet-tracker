@@ -95,10 +95,7 @@ const Login = () => {
           </form>
           
           <div className="mt-4 text-center text-sm text-muted-foreground">
-            <p>Available logins:</p>
-            <p>WS / PASSWORD</p>
-            <p>client1 / password</p>
-            <p>client2 / password</p>
+            <p>Contact your Tibet Carpet representative for login credentials.</p>
           </div>
         </div>
         
