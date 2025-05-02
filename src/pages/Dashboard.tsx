@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -94,13 +94,13 @@ const Dashboard = () => {
     try {
       let fetchedOrders: Order[];
       
-      if (user.role === "admin") {
+      if (isAdmin()) {
         fetchedOrders = await getAllOrders();
       } else {
         fetchedOrders = await getOrdersByClient(user.clientCode);
       }
       
-      if (showDebug) {
+      if (showDebug && isAdmin()) {
         await fetchRawRecords();
       }
 
@@ -149,38 +149,40 @@ const Dashboard = () => {
       <Header />
       
       <main className="flex-1 container py-6">
-        {/* Debug Tools */}
+        {/* Debug Tools - Only shown to admin users */}
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl font-bold">Your Orders</h1>
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={fetchOrders}
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Refresh Data
-            </Button>
-            <Button 
-              variant={showDebug ? "default" : "outline"} 
-              size="sm" 
-              onClick={() => {
-                setShowDebug(!showDebug);
-                if (!showDebug) {
-                  fetchRawRecords();
-                }
-              }}
-              className="flex items-center gap-2"
-            >
-              <Database className="h-4 w-4" />
-              {showDebug ? "Hide Debug" : "Debug View"}
-            </Button>
-          </div>
+          {isAdmin() && (
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={fetchOrders}
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Refresh Data
+              </Button>
+              <Button 
+                variant={showDebug ? "default" : "outline"} 
+                size="sm" 
+                onClick={() => {
+                  setShowDebug(!showDebug);
+                  if (!showDebug) {
+                    fetchRawRecords();
+                  }
+                }}
+                className="flex items-center gap-2"
+              >
+                <Database className="h-4 w-4" />
+                {showDebug ? "Hide Debug" : "Debug View"}
+              </Button>
+            </div>
+          )}
         </div>
         
-        {/* Database Connection Status (Debug) */}
-        {showDebug && (
+        {/* Database Connection Status (Debug) - Only visible to admins */}
+        {showDebug && isAdmin() && (
           <div className="mb-6 p-4 border rounded-lg bg-white">
             <h3 className="font-semibold mb-2">Database Connection Status</h3>
             <div className="flex items-center gap-2 mb-2">

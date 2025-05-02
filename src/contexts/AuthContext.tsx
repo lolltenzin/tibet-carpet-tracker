@@ -11,6 +11,7 @@ interface AuthContextType {
   isLoading: boolean;
   requestPasswordReset: (username: string) => Promise<boolean>;
   resetPassword: (token: string, newPassword: string) => Promise<boolean>;
+  isAdmin: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -73,6 +74,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  // Check if current user has admin role
+  const isAdmin = () => {
+    return user?.role === 'admin';
+  };
+
   // Password reset functionality
   const requestPasswordReset = async (username: string): Promise<boolean> => {
     setIsLoading(true);
@@ -132,7 +138,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading, requestPasswordReset, resetPassword }}>
+    <AuthContext.Provider value={{ user, login, logout, isLoading, requestPasswordReset, resetPassword, isAdmin }}>
       {children}
     </AuthContext.Provider>
   );

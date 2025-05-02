@@ -4,8 +4,13 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const ProtectedRoute = ({ children }: { children: ReactNode }) => {
-  const { user, isLoading } = useAuth();
+interface ProtectedRouteProps {
+  children: ReactNode;
+  requiresAdmin?: boolean;
+}
+
+const ProtectedRoute = ({ children, requiresAdmin = false }: ProtectedRouteProps) => {
+  const { user, isLoading, isAdmin } = useAuth();
 
   if (isLoading) {
     return (
@@ -24,8 +29,14 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
     );
   }
 
+  // Check if user is authenticated
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Additional check for admin routes
+  if (requiresAdmin && !isAdmin()) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;
