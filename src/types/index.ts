@@ -22,7 +22,7 @@ export type ClientCode =
 
 export type OrderStatus = 
   | 'ORDER_APPROVAL'
-  | 'YARN_ISSUED'  // Added to match your requested statuses
+  | 'YARN_ISSUED'
   | 'RENDERING'
   | 'DYEING'
   | 'DYEING_READY'
@@ -40,7 +40,7 @@ export interface User {
   username: string;
   clientCode: ClientCode;
   clientName: string;
-  role: string; // Added role property to User interface
+  role: string;
 }
 
 export interface Order {

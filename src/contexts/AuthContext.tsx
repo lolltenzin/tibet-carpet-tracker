@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { User } from '@/types';
 import { validateCredentials } from '@/lib/data';
@@ -8,6 +9,8 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
+  requestPasswordReset: (username: string) => Promise<boolean>;
+  resetPassword: (token: string, newPassword: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -70,8 +73,66 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  // Password reset functionality
+  const requestPasswordReset = async (username: string): Promise<boolean> => {
+    setIsLoading(true);
+    
+    // Simulate network request for password reset
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        // Check if the username exists
+        const userExists = ["client1", "client2", "WS", "RM", "ADV", "HR", "NB", "TC", "LC"].includes(username);
+        
+        if (userExists) {
+          toast({
+            title: "Password reset email sent",
+            description: "If an account exists with this username, you will receive a password reset link",
+          });
+          resolve(true);
+        } else {
+          // Don't reveal if the username exists or not for security reasons
+          toast({
+            title: "Password reset email sent",
+            description: "If an account exists with this username, you will receive a password reset link",
+          });
+          resolve(false);
+        }
+        
+        setIsLoading(false);
+      }, 1000);
+    });
+  };
+
+  const resetPassword = async (token: string, newPassword: string): Promise<boolean> => {
+    setIsLoading(true);
+    
+    // Simulate network request for password reset confirmation
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        // In a real application, we would verify the token
+        // and update the password in the database
+        if (token && newPassword.length >= 6) {
+          toast({
+            title: "Password reset successful",
+            description: "Your password has been updated. You can now log in with your new password.",
+          });
+          resolve(true);
+        } else {
+          toast({
+            title: "Password reset failed",
+            description: "Invalid or expired token. Please try again.",
+            variant: "destructive",
+          });
+          resolve(false);
+        }
+        
+        setIsLoading(false);
+      }, 1000);
+    });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, login, logout, isLoading, requestPasswordReset, resetPassword }}>
       {children}
     </AuthContext.Provider>
   );
