@@ -1,8 +1,9 @@
 
-import { ReactNode } from "react";
-import { Navigate } from "react-router-dom";
+import { ReactNode, useEffect } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "@/hooks/use-toast";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -11,6 +12,18 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute = ({ children, requiresAdmin = false }: ProtectedRouteProps) => {
   const { user, isLoading, isAdmin } = useAuth();
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    // Display toast message if trying to access admin route without admin privileges
+    if (requiresAdmin && user && !isAdmin()) {
+      toast({
+        title: "Access Denied",
+        description: "You do not have admin privileges to access this page.",
+        variant: "destructive",
+      });
+    }
+  }, [requiresAdmin, user, isAdmin, navigate]);
 
   if (isLoading) {
     return (
