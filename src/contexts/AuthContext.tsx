@@ -3,6 +3,7 @@ import React, { createContext, useState, useContext, useEffect, ReactNode } from
 import { User } from '@/types';
 import { validateCredentials } from '@/lib/data';
 import { useToast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AuthContextType {
   user: User | null;
@@ -26,7 +27,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const storedUser = localStorage.getItem('tibet_carpet_user');
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        
+        // After retrieving the user from localStorage, also sign in with Supabase
+        // using a custom token for the RLS policies to work
+        signInWithSupabase(parsedUser);
       } catch (e) {
         console.error("Failed to parse stored user", e);
         localStorage.removeItem('tibet_carpet_user');
@@ -34,6 +40,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     setIsLoading(false);
   }, []);
+
+  // Helper function to sign in with Supabase using a custom token
+  const signInWithSupabase = async (user: User) => {
+    try {
+      // Since we don't have real auth yet, we'll use custom JWT or session
+      // Here we're simulating a session by signing in anonymously with custom claims
+      // In a real app, this would be replaced with proper auth
+      const { error } = await supabase.auth.signInWithPassword({
+        email: `${user.username}@example.com`, // simulated email
+        password: 'password', // simulated password
+      });
+      
+      if (error) {
+        console.error("Failed to sign in with Supabase:", error);
+      }
+    } catch (error) {
+      console.error("Error during Supabase sign in:", error);
+    }
+  };
 
   const login = async (username: string, password: string): Promise<boolean> => {
     setIsLoading(true);
@@ -46,6 +71,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (authenticatedUser) {
           setUser(authenticatedUser);
           localStorage.setItem('tibet_carpet_user', JSON.stringify(authenticatedUser));
+          
+          // Also sign in with Supabase for RLS
+          signInWithSupabase(authenticatedUser);
+          
           toast({
             title: "Login successful",
             description: `Welcome back, ${authenticatedUser.clientName}`,
@@ -68,6 +97,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('tibet_carpet_user');
+    
+    // Also sign out from Supabase
+    supabase.auth.signOut();
+    
     toast({
       title: "Logged out",
       description: "You have been logged out successfully",
