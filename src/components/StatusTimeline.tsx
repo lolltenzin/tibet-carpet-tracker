@@ -9,11 +9,23 @@ interface StatusTimelineProps {
 }
 
 export function StatusTimeline({ timeline, currentStatus }: StatusTimelineProps) {
-  // Sort timeline entries by date (if available)
+  // Define the order of statuses for the timeline display
+  const statusOrder: OrderStatus[] = [
+    'ORDER_APPROVAL',
+    'YARN_ISSUED',
+    'DYEING',
+    'DYEING_READY',
+    'ONLOOM',
+    'OFFLOOM',
+    'FINISHING',
+    'DELIVERY_TIME',
+  ];
+  
+  // Sort timeline entries by the predetermined order
   const sortedTimeline = [...timeline].sort((a, b) => {
-    if (!a.date) return -1;
-    if (!b.date) return 1;
-    return new Date(a.date).getTime() - new Date(b.date).getTime();
+    const aIndex = statusOrder.indexOf(a.stage);
+    const bIndex = statusOrder.indexOf(b.stage);
+    return aIndex - bIndex;
   });
 
   return (

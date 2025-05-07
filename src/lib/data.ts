@@ -1,4 +1,3 @@
-
 import { Order, OrderStatus, ClientCode, User } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -131,12 +130,49 @@ export const validateCredentials = (username: string, password: string): User | 
       clientCode: "WS",
       clientName: "WS Client",
       role: "client"
+    },
+    "RM": {
+      id: "user4",
+      username: "RM",
+      clientCode: "RM",
+      clientName: "Royal Mats",
+      role: "client"
+    },
+    "ADV": {
+      id: "user5",
+      username: "ADV",
+      clientCode: "ADV",
+      clientName: "Advance Designs",
+      role: "client"
+    },
+    "HR": {
+      id: "user6",
+      username: "HR",
+      clientCode: "HR",
+      clientName: "Himalayan Rugs",
+      role: "client"
+    },
+    "NB": {
+      id: "user7",
+      username: "NB",
+      clientCode: "NB",
+      clientName: "Noble Brands",
+      role: "client"
+    },
+    "admin": {
+      id: "admin1",
+      username: "admin",
+      clientCode: "TC",
+      clientName: "System Administrator",
+      role: "admin"
     }
   };
 
   // Simple validation - checking if WS with PASSWORD, otherwise use default logic
   if (username === "WS" && password === "PASSWORD") {
     return validUsers["WS"];
+  } else if (username === "admin" && password === "admin123") {
+    return validUsers["admin"];
   } else if (validUsers[username] && password === "password") {
     return validUsers[username];
   }
@@ -174,7 +210,7 @@ const normalizeStatus = (status: string): OrderStatus => {
 
 // Build timeline based on current status
 const buildOrderTimeline = (status: OrderStatus, orderIssuedDate?: string, deliveryDate?: string): Order['timeline'] => {
-  // Get order information for all statuses
+  // Define the order of statuses for the timeline display
   const allStatuses: OrderStatus[] = [
     'ORDER_APPROVAL',
     'YARN_ISSUED',
@@ -425,5 +461,32 @@ export const getOrderById = async (orderId: string): Promise<Order | undefined> 
   } catch (error) {
     console.error("Exception in getOrderById:", error);
     return undefined;
+  }
+};
+
+// Override the console.log to hide debug information for non-admin users
+const originalConsoleLog = console.log;
+console.log = function() {
+  // Check if the user is logged in and has admin role
+  const storedUser = localStorage.getItem('tibet_carpet_user');
+  let isAdmin = false;
+  
+  if (storedUser) {
+    try {
+      const user = JSON.parse(storedUser);
+      isAdmin = user.role === 'admin';
+    } catch (e) {
+      // If there's an error parsing, just continue
+    }
+  }
+  
+  // Only show debug logs to admins
+  if (isAdmin) {
+    originalConsoleLog.apply(console, arguments);
+  } else {
+    // For regular users, filter out debugging logs except for errors
+    if (arguments[0] === "Error" || arguments[0]?.includes?.("error") || arguments[0]?.includes?.("Exception")) {
+      originalConsoleLog.apply(console, arguments);
+    }
   }
 };
