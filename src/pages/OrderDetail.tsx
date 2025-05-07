@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -41,7 +40,12 @@ const OrderDetail = () => {
     fetchOrder();
   }, [orderId, toast]);
 
-  const hasAccess = order && user && order.clientCode === user.clientCode;
+  const hasAccess = order && user && (order.clientCode === user.clientCode || user.role === 'admin');
+
+  // Filter the timeline to only show relevant statuses
+  const relevantTimeline = order?.timeline.filter(item => 
+    ['ORDER_APPROVAL', 'YARN_ISSUED', 'DYEING', 'DYEING_READY', 'ONLOOM', 'OFFLOOM', 'FINISHING', 'DELIVERY_TIME'].includes(item.stage)
+  ) || [];
 
   if (isLoading) {
     return (
@@ -158,7 +162,7 @@ const OrderDetail = () => {
             <div className="bg-white rounded-lg border p-6">
               <h2 className="text-lg font-medium mb-6">Production Timeline</h2>
               <StatusTimeline 
-                timeline={order.timeline}
+                timeline={relevantTimeline}
                 currentStatus={order.status}
               />
             </div>
@@ -176,6 +180,7 @@ const OrderDetail = () => {
                 <StatusBadge status={order.status} size="lg" />
                 <p className="mt-2 text-sm">
                   {order.status === "ORDER_APPROVAL" && "Raw materials have been selected and issued for production."}
+                  {order.status === "YARN_ISSUED" && "Yarn has been issued to start the production process."}
                   {order.status === "RENDERING" && "Design artwork/rendering is being prepared."}
                   {order.status === "DYEING" && "Your carpet's yarn is being dyed to match your color specifications."}
                   {order.status === "DYEING_READY" && "Dyed yarn is ready for further processing."}

@@ -22,6 +22,7 @@ export type ClientCode =
 
 export type OrderStatus = 
   | 'ORDER_APPROVAL'
+  | 'YARN_ISSUED'  // Added to match your requested statuses
   | 'RENDERING'
   | 'DYEING'
   | 'DYEING_READY'

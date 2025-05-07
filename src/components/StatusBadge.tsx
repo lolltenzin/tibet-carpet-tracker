@@ -9,7 +9,8 @@ import {
   Circle,               // For Onloom, Onloom Progress, Offloom
   Truck,                // For Delivery Time
   Calendar,             // For First/Second Revised Delivery Date
-  Clock                 // For delays
+  Clock,                // For delays
+  Package               // For Yarn Issued
 } from "lucide-react";
 
 interface StatusBadgeProps {
@@ -26,6 +27,8 @@ export function StatusBadge({ status, hasDelay = false, size = "md" }: StatusBad
     switch (status) {
       case "ORDER_APPROVAL":
         return <Check className="h-3 w-3" />;
+      case "YARN_ISSUED":
+        return <Package className="h-3 w-3" />;
       case "RENDERING":
         return <Layers className="h-3 w-3" />;
       case "DYEING":
@@ -52,6 +55,7 @@ export function StatusBadge({ status, hasDelay = false, size = "md" }: StatusBad
   // Color classes - you can adjust shades to match your design
   const statusClasses: Record<OrderStatus, string> = {
     ORDER_APPROVAL: "bg-blue-100 text-blue-800",
+    YARN_ISSUED: "bg-emerald-100 text-emerald-800",
     RENDERING: "bg-purple-100 text-purple-800",
     DYEING: "bg-sky-100 text-sky-800",
     DYEING_READY: "bg-indigo-100 text-indigo-800",
