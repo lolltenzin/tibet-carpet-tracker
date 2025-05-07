@@ -9,12 +9,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
-import { User, LogOut, Settings } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { User, LogOut } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export function Header() {
   const { user, logout } = useAuth();
-  const location = useLocation();
 
   return (
     <header className="sticky top-0 z-30 w-full border-b bg-background">
@@ -28,25 +27,6 @@ export function Header() {
 
         {user ? (
           <div className="flex items-center gap-4">
-            {user.role === "admin" && (
-              <Button 
-                variant={location.pathname === "/admin" ? "default" : "outline"}
-                size="sm"
-                asChild
-              >
-                <Link to="/admin">
-                  <Settings className="mr-2 h-4 w-4" />
-                  Admin Portal
-                </Link>
-              </Button>
-            )}
-            <Button 
-              variant={location.pathname === "/dashboard" ? "default" : "outline"}
-              size="sm"
-              asChild
-            >
-              <Link to="/dashboard">Dashboard</Link>
-            </Button>
             <span className="text-sm text-muted-foreground hidden md:inline-block">
               Welcome, {user.clientName}
             </span>

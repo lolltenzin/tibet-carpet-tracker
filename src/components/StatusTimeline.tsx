@@ -1,5 +1,5 @@
 
-import { Order, OrderStatus } from "@/types";
+import { Order } from "@/types";
 import { getStatusDisplayInfo } from "@/lib/data";
 import { Check } from "lucide-react";
 
@@ -9,37 +9,18 @@ interface StatusTimelineProps {
 }
 
 export function StatusTimeline({ timeline, currentStatus }: StatusTimelineProps) {
-  // Define the order of statuses for the timeline display
-  const statusOrder: OrderStatus[] = [
-    'ORDER_APPROVAL',
-    'YARN_ISSUED',
-    'DYEING',
-    'DYEING_READY',
-    'ONLOOM',
-    'OFFLOOM',
-    'FINISHING',
-    'DELIVERY_TIME',
-  ];
-  
-  // Sort timeline entries by the predetermined order
-  const sortedTimeline = [...timeline].sort((a, b) => {
-    const aIndex = statusOrder.indexOf(a.stage);
-    const bIndex = statusOrder.indexOf(b.stage);
-    return aIndex - bIndex;
-  });
-
   return (
     <div className="relative space-y-8 py-2">
       {/* Timeline line */}
       <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-muted" />
       
-      {sortedTimeline.map(({ stage, date, completed }, index) => {
+      {timeline.map(({ stage, date, completed }, index) => {
         const { label, description } = getStatusDisplayInfo(stage);
-        const isLastCompleted = completed && index === sortedTimeline.filter(t => t.completed).length - 1;
+        const isLastCompleted = completed && index === timeline.filter(t => t.completed).length - 1;
         const isActive = stage === currentStatus;
         
         return (
-          <div key={`${stage}-${index}`} className="relative pl-10">
+          <div key={stage} className="relative pl-10">
             {/* Timeline marker */}
             <div 
               className={`absolute left-0 rounded-full p-1.5 ${

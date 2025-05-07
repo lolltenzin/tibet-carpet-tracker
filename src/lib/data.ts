@@ -9,92 +9,73 @@ export const getStatusDisplayInfo = (status: OrderStatus) => {
       label: "Order Approval", 
       color: "bg-slate-400",
       textColor: "text-slate-50",
-      description: "Order has been received and is awaiting approval",
-      order: 1
-    },
-    "YARN_ISSUED": { 
-      label: "Yarn Issued", 
-      color: "bg-emerald-400",
-      textColor: "text-emerald-50",
-      description: "Raw materials have been issued for production",
-      order: 2
+      description: "Order has been received and is awaiting approval"
     },
     "RENDERING": {
       label: "Rendering",
       color: "bg-sky-400",
       textColor: "text-sky-50",
-      description: "Design is being rendered",
-      order: 3
+      description: "Design is being rendered"
     },
     "DYEING": {
       label: "Dyeing", 
       color: "bg-indigo-400",
       textColor: "text-indigo-50",
-      description: "Materials are being dyed to specification",
-      order: 4
+      description: "Materials are being dyed to specification"
     },
     "DYEING_READY": {
       label: "Dyeing Ready", 
       color: "bg-violet-400",
       textColor: "text-violet-50",
-      description: "Dyeing process is complete",
-      order: 5
+      description: "Dyeing process is complete"
     },
     "WAITING_FOR_LOOM": {
       label: "Waiting for Loom", 
       color: "bg-purple-400",
       textColor: "text-purple-50",
-      description: "Materials are ready and waiting for loom availability",
-      order: 6
+      description: "Materials are ready and waiting for loom availability"
     },
     "ONLOOM": {
       label: "On Loom", 
       color: "bg-fuchsia-400",
       textColor: "text-fuchsia-50",
-      description: "Carpet is being woven on the loom",
-      order: 7
+      description: "Carpet is being woven on the loom"
     },
     "ONLOOM_PROGRESS": {
       label: "On Loom Progress", 
       color: "bg-pink-400",
       textColor: "text-pink-50",
-      description: "Weaving is in progress",
-      order: 8
+      description: "Weaving is in progress"
     },
     "OFFLOOM": {
       label: "Off Loom",
       color: "bg-rose-400",
       textColor: "text-rose-50",
-      description: "Carpet has been removed from the loom",
-      order: 9
+      description: "Carpet has been removed from the loom"
     },
     "FINISHING": {
       label: "Finishing", 
       color: "bg-green-400",
       textColor: "text-green-50",
-      description: "Final touches and quality control",
-      order: 10
+      description: "Final touches and quality control"
     },
     "DELIVERY_TIME": {
       label: "Ready for Delivery", 
       color: "bg-emerald-400",
       textColor: "text-emerald-50",
-      description: "Carpet is ready to be delivered",
-      order: 11
+      description: "Carpet is ready to be delivered"
     },
     "FIRST_REVISED_DELIVERY_DATE": {
       label: "First Revised Date", 
       color: "bg-amber-400",
       textColor: "text-amber-50",
-      description: "Delivery date has been revised once",
-      order: 12
+      description: "Delivery date has been revised once"
     },
     "SECOND_REVISED_DELIVERY_DATE": {
       label: "Second Revised Date", 
       color: "bg-red-400",
       textColor: "text-red-50",
-      description: "Delivery date has been revised twice",
-      order: 13
+      description: "Delivery date has been revised twice"
     }
   };
   
@@ -102,8 +83,7 @@ export const getStatusDisplayInfo = (status: OrderStatus) => {
     label: status,
     color: "bg-gray-400",
     textColor: "text-gray-50",
-    description: "Status information unavailable",
-    order: 99
+    description: "Status information unavailable"
   };
 };
 
@@ -131,49 +111,12 @@ export const validateCredentials = (username: string, password: string): User | 
       clientCode: "WS",
       clientName: "WS Client",
       role: "client"
-    },
-    "RM": {
-      id: "user4",
-      username: "RM",
-      clientCode: "RM",
-      clientName: "Royal Mats",
-      role: "client"
-    },
-    "ADV": {
-      id: "user5",
-      username: "ADV",
-      clientCode: "ADV",
-      clientName: "Advance Designs",
-      role: "client"
-    },
-    "HR": {
-      id: "user6",
-      username: "HR",
-      clientCode: "HR",
-      clientName: "Himalayan Rugs",
-      role: "client"
-    },
-    "NB": {
-      id: "user7",
-      username: "NB",
-      clientCode: "NB",
-      clientName: "Noble Brands",
-      role: "client"
-    },
-    "admin": {
-      id: "admin1",
-      username: "admin",
-      clientCode: "TC",
-      clientName: "System Administrator",
-      role: "admin"
     }
   };
 
   // Simple validation - checking if WS with PASSWORD, otherwise use default logic
   if (username === "WS" && password === "PASSWORD") {
     return validUsers["WS"];
-  } else if (username === "admin" && password === "admin123") {
-    return validUsers["admin"];
   } else if (validUsers[username] && password === "password") {
     return validUsers[username];
   }
@@ -181,98 +124,15 @@ export const validateCredentials = (username: string, password: string): User | 
   return null;
 };
 
-// Helper function to normalize status from database
-const normalizeStatus = (status: string): OrderStatus => {
-  // Convert to uppercase and replace spaces with underscores
-  const normalized = status.trim().toUpperCase().replace(/\s+/g, '_');
-  
-  // Map common variations to our defined OrderStatus types
-  const statusMap: Record<string, OrderStatus> = {
-    'ORDER_APPROVAL': 'ORDER_APPROVAL',
-    'ORDER_ISSUED': 'ORDER_APPROVAL',
-    'YARN_ISSUED': 'YARN_ISSUED',
-    'RENDERING': 'RENDERING',
-    'DYEING': 'DYEING',
-    'DYEING_READY': 'DYEING_READY',
-    'WAITING_FOR_LOOM': 'WAITING_FOR_LOOM',
-    'ONLOOM': 'ONLOOM',
-    'ONLOOM_PROGRESS': 'ONLOOM_PROGRESS',
-    'OFFLOOM': 'OFFLOOM',
-    'FINISHING': 'FINISHING',
-    'DELIVERY_TIME': 'DELIVERY_TIME',
-    'DELIVERY': 'DELIVERY_TIME',
-    'FIRST_REVISED_DELIVERY_DATE': 'FIRST_REVISED_DELIVERY_DATE',
-    'SECOND_REVISED_DELIVERY_DATE': 'SECOND_REVISED_DELIVERY_DATE'
-  };
-  
-  // Return the mapped status or default to ORDER_APPROVAL if not found
-  return statusMap[normalized] || 'ORDER_APPROVAL';
-};
-
-// Build timeline based on current status
-const buildOrderTimeline = (status: OrderStatus, orderIssuedDate?: string, deliveryDate?: string): Order['timeline'] => {
-  // Define the order of statuses for the timeline display
-  const allStatuses: OrderStatus[] = [
-    'ORDER_APPROVAL',
-    'YARN_ISSUED',
-    'DYEING',
-    'DYEING_READY',
-    'ONLOOM',
-    'OFFLOOM',
-    'FINISHING',
-    'DELIVERY_TIME'
-  ];
-  
-  // Get the index of the current status in our sequence
-  const currentStatusInfo = getStatusDisplayInfo(status);
-  const currentOrder = currentStatusInfo.order;
-  
-  // Build timeline with completion status based on the current status
-  return allStatuses.map(stage => {
-    const stageInfo = getStatusDisplayInfo(stage);
-    const isCompleted = stageInfo.order <= currentOrder;
-    
-    // Determine the date for this stage
-    let stageDate: string | undefined;
-    
-    if (stage === 'ORDER_APPROVAL' && orderIssuedDate) {
-      stageDate = orderIssuedDate;
-    } else if ((stage === 'DELIVERY_TIME' || stage === 'FINISHING') && deliveryDate) {
-      stageDate = deliveryDate;
-    } else if (isCompleted) {
-      // For completed stages without specific dates, use estimated dates based on progress
-      const today = new Date();
-      const orderDate = orderIssuedDate ? new Date(orderIssuedDate) : new Date();
-      const deliveryDateObj = deliveryDate ? new Date(deliveryDate) : new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
-      
-      // Calculate a date between order and delivery based on the stage's position
-      const totalDuration = deliveryDateObj.getTime() - orderDate.getTime();
-      const stagePosition = allStatuses.indexOf(stage) / (allStatuses.length - 1);
-      const estimatedTime = orderDate.getTime() + (totalDuration * stagePosition);
-      
-      stageDate = new Date(estimatedTime).toISOString();
-    }
-    
-    return {
-      stage,
-      date: stageDate,
-      completed: isCompleted
-    };
-  });
-};
-
 // Helper function to map database records to our Order type
-export const mapCarpetOrderToOrder = (record: any): Order => {
+const mapCarpetOrderToOrder = (record: any): Order => {
   console.log("Mapping record:", record); // Added debugging
   
-  // Map STATUS to one of our predefined statuses with normalization
-  const status = normalizeStatus(record.STATUS || "ORDER_APPROVAL");
+  // Map STATUS to one of our predefined statuses or default to ORDER_APPROVAL
+  const status = record.STATUS as OrderStatus || "ORDER_APPROVAL";
   
   // Map client code from table or default to a default client
   const clientCode = record.Buyercode as ClientCode || "WS"; // Changed default to WS
-  
-  // Build the timeline based on the current status
-  const timeline = buildOrderTimeline(status, record["Order issued"], record["Delivery Date"]);
   
   return {
     id: record.Carpetno,
@@ -282,7 +142,10 @@ export const mapCarpetOrderToOrder = (record: any): Order => {
     dimensions: record.Size || "Unknown",
     status: status,
     hasDelay: false, // We can enhance this later based on delivery dates
-    timeline: timeline,
+    timeline: [
+      { stage: "ORDER_APPROVAL", date: record["Order issued"] || new Date().toISOString(), completed: true },
+      { stage: "FINISHING", date: record["Delivery Date"] || new Date().toISOString(), completed: false }
+    ],
     estimatedCompletion: record["Delivery Date"] || undefined
   };
 };
@@ -291,139 +154,140 @@ export const mapCarpetOrderToOrder = (record: any): Order => {
 export const getAllOrders = async (): Promise<Order[]> => {
   console.log("Fetching all orders");
   
-  try {
-    // With RLS policies now in place, this should work
-    const { data, error } = await supabase
-      .from("CarpetOrder")
-      .select("*");
-      
-    if (error) {
-      console.error("Error fetching all orders:", error);
-      return [];
-    }
+  // Let's try to directly check what's in the database table
+  const { data, error } = await supabase
+    .from("CarpetOrder")
+    .select("*");
     
-    console.log("All orders data:", data);
-    
-    if (!data || data.length === 0) {
-      console.log("No orders found in the database. Creating a sample order.");
-      
-      // Create a sample order
-      try {
-        const { data: insertResult, error: insertError } = await supabase
-          .from("CarpetOrder")
-          .insert([
-            { 
-              Carpetno: "TEST-123", 
-              Buyercode: "WS", 
-              Design: "Test Design", 
-              Size: "3x5", 
-              STATUS: "ORDER_APPROVAL", 
-              "Order issued": new Date().toISOString(), 
-              "Delivery Date": new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() 
-            }
-          ])
-          .select();
-        
-        if (insertError) {
-          console.error("Error inserting test order:", insertError);
-        } else {
-          console.log("Successfully inserted test order:", insertResult);
-          return insertResult.map(mapCarpetOrderToOrder);
-        }
-      } catch (insertCatchError) {
-        console.error("Exception when inserting test order:", insertCatchError);
-      }
-      
-      return [];
-    }
-    
-    return data.map(mapCarpetOrderToOrder);
-  } catch (error) {
-    console.error("Exception in getAllOrders:", error);
+  if (error) {
+    console.error("Error fetching all orders:", error);
     return [];
   }
+  
+  console.log("All orders data:", data); // Added debugging
+  
+  if (!data || data.length === 0) {
+    console.log("No orders found in the database at all");
+    
+    // Let's create a test order to see if we can write to the database
+    try {
+      const { data: insertResult, error: insertError } = await supabase
+        .from("CarpetOrder")
+        .insert([
+          { 
+            Carpetno: "TEST-123", 
+            Buyercode: "WS", 
+            Design: "Test Design", 
+            Size: "3x5", 
+            STATUS: "ORDER_APPROVAL", 
+            "Order issued": new Date().toISOString(), 
+            "Delivery Date": new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() 
+          }
+        ])
+        .select();
+      
+      if (insertError) {
+        console.error("Error inserting test order:", insertError);
+      } else {
+        console.log("Successfully inserted test order:", insertResult);
+      }
+    } catch (insertCatchError) {
+      console.error("Exception when inserting test order:", insertCatchError);
+    }
+  }
+  
+  return data?.map(mapCarpetOrderToOrder) || [];
 };
 
 // Fetch orders for a specific client
 export const getOrdersByClient = async (clientCode: ClientCode): Promise<Order[]> => {
-  console.log("Fetching orders for client code:", clientCode);
+  console.log("Fetching orders for client code:", clientCode); // Added debugging
   
-  try {
-    // With RLS policies now in place, this should work
-    const { data, error } = await supabase
-      .from("CarpetOrder")
-      .select("*")
-      .eq("Buyercode", clientCode);
+  // First try exact match
+  let { data, error } = await supabase
+    .from("CarpetOrder")
+    .select("*")
+    .eq("Buyercode", clientCode);
+  
+  if (error) {
+    console.error("Error fetching orders for client:", error);
+    return [];
+  }
+  
+  console.log(`Found ${data?.length || 0} orders with exact match for Buyercode=${clientCode}`); // Added debugging
+  
+  // If no data found with exact match, try case insensitive match
+  if (!data || data.length === 0) {
+    console.log("Trying case insensitive match"); // Added debugging
     
-    if (error) {
-      console.error("Error fetching orders for client:", error);
+    // Get all data and filter manually for case-insensitive match
+    const { data: allData, error: allError } = await supabase
+      .from("CarpetOrder")
+      .select("*");
+      
+    if (allError) {
+      console.error("Error fetching all orders:", allError);
       return [];
     }
     
-    console.log(`Found ${data?.length || 0} orders for Buyercode=${clientCode}`);
+    // Filter for case-insensitive match
+    data = allData.filter(
+      record => record.Buyercode && 
+                record.Buyercode.toString().trim().toUpperCase() === clientCode.toUpperCase()
+    );
     
-    if (!data || data.length === 0) {
-      console.log("No orders found with exact match, trying case insensitive match");
-      
-      // Get all data and filter manually for case-insensitive match
-      const { data: allData, error: allError } = await supabase
+    console.log(`Found ${data?.length || 0} orders with case-insensitive match`); // Added debugging
+  }
+  
+  // If still no data, try inserting a test record and verify database access
+  if (!data || data.length === 0) {
+    console.log("No orders found for client, verifying database access by inserting a test record");
+    
+    try {
+      const { data: insertResult, error: insertError } = await supabase
         .from("CarpetOrder")
-        .select("*");
+        .insert([
+          { 
+            Carpetno: `TEST-${clientCode}-${Date.now()}`, 
+            Buyercode: clientCode, 
+            Design: "Test Design", 
+            Size: "3x5", 
+            STATUS: "ORDER_APPROVAL", 
+            "Order issued": new Date().toISOString(), 
+            "Delivery Date": new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() 
+          }
+        ])
+        .select();
+      
+      if (insertError) {
+        console.error("Error inserting test order:", insertError);
+        console.log("This could indicate a permission issue or that the table doesn't exist");
+      } else {
+        console.log("Successfully inserted test order:", insertResult);
         
-      if (allError) {
-        console.error("Error fetching all orders:", allError);
-        return [];
-      }
-      
-      // Filter for case-insensitive match
-      const matchingData = allData.filter(
-        record => record.Buyercode && 
-                  record.Buyercode.toString().trim().toUpperCase() === clientCode.toUpperCase()
-      );
-      
-      console.log(`Found ${matchingData?.length || 0} orders with case-insensitive match`);
-      
-      if (matchingData.length > 0) {
-        return matchingData.map(mapCarpetOrderToOrder);
-      }
-      
-      // If still no data, create a sample order for this client
-      console.log("Creating sample order for client:", clientCode);
-      
-      try {
-        const { data: insertResult, error: insertError } = await supabase
+        // Fetch again to verify we can read what we just wrote
+        const { data: refreshData, error: refreshError } = await supabase
           .from("CarpetOrder")
-          .insert([
-            { 
-              Carpetno: `${clientCode}-SAMPLE-${Date.now()}`, 
-              Buyercode: clientCode, 
-              Design: "Sample Design", 
-              Size: "3x5", 
-              STATUS: "ORDER_APPROVAL", 
-              "Order issued": new Date().toISOString(), 
-              "Delivery Date": new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() 
-            }
-          ])
-          .select();
-        
-        if (insertError) {
-          console.error("Error inserting sample order:", insertError);
+          .select("*")
+          .eq("Buyercode", clientCode);
+          
+        if (refreshError) {
+          console.error("Error re-fetching after insert:", refreshError);
         } else {
-          console.log("Successfully inserted sample order:", insertResult);
-          return insertResult.map(mapCarpetOrderToOrder);
+          console.log("After insert, found", refreshData?.length, "orders");
+          data = refreshData;
         }
-      } catch (insertCatchError) {
-        console.error("Exception when inserting sample order:", insertCatchError);
       }
+    } catch (insertCatchError) {
+      console.error("Exception when inserting test order:", insertCatchError);
     }
+  }
+  
+  // If we still have no data, fall back to sample data
+  if (!data || data.length === 0) {
+    console.log("No orders found, creating fallback sample orders");
     
-    return data.map(mapCarpetOrderToOrder);
-  } catch (error) {
-    console.error("Exception in getOrdersByClient:", error);
-    
-    // Fall back to sample data
-    console.log("Falling back to sample data");
-    
+    // Create sample orders for demonstration
     return [
       {
         id: "SAMPLE-001",
@@ -439,55 +303,42 @@ export const getOrdersByClient = async (clientCode: ClientCode): Promise<Order[]
           { stage: "FINISHING", date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), completed: false }
         ],
         estimatedCompletion: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      },
+      {
+        id: "SAMPLE-002",
+        clientCode: clientCode,
+        orderNumber: "SAMPLE-002",
+        carpetName: "Sample Luxury Carpet",
+        dimensions: "8x10",
+        status: "DYEING",
+        hasDelay: true,
+        delayReason: "Material shortage",
+        timeline: [
+          { stage: "ORDER_APPROVAL", date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), completed: true },
+          { stage: "RENDERING", date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), completed: true },
+          { stage: "DYEING", date: new Date().toISOString(), completed: true },
+          { stage: "FINISHING", date: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString(), completed: false }
+        ],
+        estimatedCompletion: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString()
       }
     ];
   }
+  
+  return data.map(mapCarpetOrderToOrder);
 };
 
 // Get a specific order by ID
 export const getOrderById = async (orderId: string): Promise<Order | undefined> => {
-  try {
-    const { data, error } = await supabase
-      .from("CarpetOrder")
-      .select("*")
-      .eq("Carpetno", orderId)
-      .single();
-      
-    if (error) {
-      console.error("Error fetching order:", error);
-      return undefined;
-    }
+  const { data, error } = await supabase
+    .from("CarpetOrder")
+    .select("*")
+    .eq("Carpetno", orderId)
+    .single();
     
-    return mapCarpetOrderToOrder(data);
-  } catch (error) {
-    console.error("Exception in getOrderById:", error);
+  if (error) {
+    console.error("Error fetching order:", error);
     return undefined;
   }
-};
-
-// Override the console.log to hide debug information for non-admin users
-const originalConsoleLog = console.log;
-console.log = function() {
-  // Check if the user is logged in and has admin role
-  const storedUser = localStorage.getItem('tibet_carpet_user');
-  let isAdmin = false;
   
-  if (storedUser) {
-    try {
-      const user = JSON.parse(storedUser);
-      isAdmin = user.role === 'admin';
-    } catch (e) {
-      // If there's an error parsing, just continue
-    }
-  }
-  
-  // Only show debug logs to admins
-  if (isAdmin) {
-    originalConsoleLog.apply(console, arguments);
-  } else {
-    // For regular users, filter out debugging logs except for errors
-    if (arguments[0] === "Error" || arguments[0]?.includes?.("error") || arguments[0]?.includes?.("Exception")) {
-      originalConsoleLog.apply(console, arguments);
-    }
-  }
+  return mapCarpetOrderToOrder(data);
 };

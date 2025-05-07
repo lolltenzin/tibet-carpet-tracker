@@ -22,7 +22,6 @@ export type ClientCode =
 
 export type OrderStatus = 
   | 'ORDER_APPROVAL'
-  | 'YARN_ISSUED'
   | 'RENDERING'
   | 'DYEING'
   | 'DYEING_READY'
@@ -40,7 +39,7 @@ export interface User {
   username: string;
   clientCode: ClientCode;
   clientName: string;
-  role: string;
+  role: string; // Added role property to User interface
 }
 
 export interface Order {

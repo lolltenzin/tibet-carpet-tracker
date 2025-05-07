@@ -18,7 +18,6 @@ export type Database = {
           "Order issued": string | null
           Size: string | null
           STATUS: string | null
-          User_Id: string | null
         }
         Insert: {
           Buyercode?: string | null
@@ -28,7 +27,6 @@ export type Database = {
           "Order issued"?: string | null
           Size?: string | null
           STATUS?: string | null
-          User_Id?: string | null
         }
         Update: {
           Buyercode?: string | null
@@ -38,7 +36,6 @@ export type Database = {
           "Order issued"?: string | null
           Size?: string | null
           STATUS?: string | null
-          User_Id?: string | null
         }
         Relationships: []
       }
@@ -47,10 +44,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never

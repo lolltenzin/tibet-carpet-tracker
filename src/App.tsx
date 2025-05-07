@@ -11,7 +11,6 @@ import Dashboard from "./pages/Dashboard";
 import OrderDetail from "./pages/OrderDetail";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
-import Admin from "./pages/Admin";
 
 const queryClient = new QueryClient();
 
@@ -20,8 +19,8 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
+      <AuthProvider>
+        <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
@@ -41,18 +40,10 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            <Route 
-              path="/admin" 
-              element={
-                <ProtectedRoute requiresAdmin={true}>
-                  <Admin />
-                </ProtectedRoute>
-              } 
-            />
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </AuthProvider>
-      </BrowserRouter>
+        </BrowserRouter>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

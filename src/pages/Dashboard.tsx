@@ -1,190 +1,121 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/Header";
 import { OrderCard } from "@/components/OrderCard";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { getOrdersByClient, getAllOrders, mapCarpetOrderToOrder } from "@/lib/data";
+import { Input } from "@/components/ui/input";
+import { getOrdersByClient, getAllOrders } from "@/lib/data";
 import { Order, OrderStatus } from "@/types";
 import { getStatusDisplayInfo } from "@/lib/data";
 import { CheckCheck, Filter, Search, Loader2, AlertTriangle, Database, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
+const STATUS_LIST: OrderStatus[] = [
+  "ORDER_APPROVAL",
+  "RENDERING",
+  "DYEING",
+  "DYEING_READY",
+  "WAITING_FOR_LOOM",
+  "ONLOOM",
+  "ONLOOM_PROGRESS",
+  "OFFLOOM",
+  "FINISHING",
+  "DELIVERY_TIME",
+  "FIRST_REVISED_DELIVERY_DATE",
+  "SECOND_REVISED_DELIVERY_DATE"
+];
 
 const Dashboard = () => {
-  const { user, isAdmin } = useAuth();
-  const [orders, setOrders] = useState<Order[]>([]);
+  const { user } = useAuth();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<OrderStatus | "ALL">("ALL");
+  const [clientOrders, setClientOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState<OrderStatus | "ALL">("ALL");
-  const [showCompletedOrders, setShowCompletedOrders] = useState(true);
-  const [showDebug, setShowDebug] = useState(false);
-  const [dbConnectionStatus, setDbConnectionStatus] = useState<'checking' | 'connected' | 'error'>('checking');
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
   const [rawRecords, setRawRecords] = useState<any[]>([]);
-  const [supabaseSession, setSupabaseSession] = useState<any>(null);
   const { toast } = useToast();
+  const [showDebugView, setShowDebugView] = useState(false);
+  const [databaseStatus, setDatabaseStatus] = useState<'unknown' | 'connected' | 'error'>('unknown');
 
-  // List of all possible order statuses to use in the filter
-  const allStatuses: Array<OrderStatus | "ALL"> = [
-    "ALL",
-    "ORDER_APPROVAL",
-    "RENDERING",
-    "DYEING",
-    "DYEING_READY",
-    "WAITING_FOR_LOOM",
-    "ONLOOM",
-    "ONLOOM_PROGRESS",
-    "OFFLOOM",
-    "FINISHING",
-    "DELIVERY_TIME",
-    "FIRST_REVISED_DELIVERY_DATE",
-    "SECOND_REVISED_DELIVERY_DATE"
-  ];
-
-  // Check Supabase session
-  const checkSupabaseAuth = async () => {
-    const { data, error } = await supabase.auth.getSession();
-    if (error) {
-      console.error("Error checking Supabase session:", error);
-    } else {
-      setSupabaseSession(data.session);
-      console.log("Current Supabase session in Dashboard:", data);
-    }
-  };
-
-  // Function to check database connection
-  const checkDbConnection = async () => {
-    setDbConnectionStatus('checking');
-    try {
-      const { data, error } = await supabase.from('CarpetOrder').select('count()', { count: 'exact', head: true });
-      
-      if (error) {
-        console.error("Database connection error:", error);
-        setDbConnectionStatus('error');
-      } else {
-        console.log("Database connected successfully");
-        setDbConnectionStatus('connected');
-      }
-    } catch (error) {
-      console.error("Exception checking DB connection:", error);
-      setDbConnectionStatus('error');
-    }
-  };
-
-  // Fetch raw records for debugging
-  const fetchRawRecords = async () => {
-    try {
-      console.log("Fetching raw records...");
-      console.log("Current Buyercode:", user?.clientCode);
-      
-      const { data, error } = await supabase
-        .from('CarpetOrder')
-        .select('*')
-        .eq('Buyercode', user?.clientCode);
-      
-      if (error) {
-        console.error("Error fetching raw records:", error);
-      } else {
-        setRawRecords(data || []);
-        console.log("Raw records:", data);
-      }
-    } catch (error) {
-      console.error("Exception fetching raw records:", error);
-    }
-  };
-  
   const fetchOrders = async () => {
-    if (!user) return;
-    
     setIsLoading(true);
-    await checkSupabaseAuth();
-    await checkDbConnection();
+    setDebugInfo(null);
     
     try {
-      let fetchedOrders: Order[];
-      
-      if (isAdmin()) {
-        fetchedOrders = await getAllOrders();
-      } else {
-        fetchedOrders = await getOrdersByClient(user.clientCode);
+      if (user) {
+        console.log("Current user:", user);
+        setDebugInfo(`Fetching orders for client: ${user.clientCode}`);
         
-        // If no orders found via the API, try direct Supabase query as fallback
-        if (fetchedOrders.length === 0) {
-          console.log("No orders found via API, trying direct Supabase query...");
-          const { data, error } = await supabase
-            .from('CarpetOrder')
-            .select('*')
-            .eq('Buyercode', user.clientCode);
-            
-          if (error) {
-            console.error("Error fetching orders via Supabase:", error);
-          } else if (data && data.length > 0) {
-            console.log("Found orders via direct Supabase query:", data);
-            // Map the raw data to our Order type - using the imported function
-            fetchedOrders = data.map(mapCarpetOrderToOrder);
-          }
+        // Get raw records for debugging
+        const { data: rawData } = await supabase
+          .from("CarpetOrder")
+          .select("*")
+          .limit(10);
+        
+        setRawRecords(rawData || []);
+        setDatabaseStatus(rawData !== null ? 'connected' : 'error');
+        
+        const orders = await getOrdersByClient(user.clientCode);
+        setClientOrders(orders);
+        
+        if (orders.length === 0) {
+          setDebugInfo(`No orders found for client code: ${user.clientCode}. Please check your database.`);
+        } else {
+          setDebugInfo(`Found ${orders.length} orders for client code: ${user.clientCode}`);
+          setTimeout(() => setDebugInfo(null), 3000);
         }
-      }
-      
-      if (showDebug && isAdmin()) {
-        await fetchRawRecords();
-      }
-
-      setOrders(fetchedOrders);
-      
-      if (fetchedOrders.length === 0) {
-        toast({
-          title: "No orders found",
-          description: "We couldn't find any orders for your account. Sample data will be shown instead.",
-          variant: "default"
-        });
       }
     } catch (error) {
       console.error("Error fetching orders:", error);
+      setDebugInfo(`Error loading orders: ${error instanceof Error ? error.message : String(error)}`);
       toast({
         title: "Error loading orders",
-        description: "There was a problem loading your orders. Please try again.",
+        description: "Unable to load your orders. Please try again later.",
         variant: "destructive"
       });
+      setDatabaseStatus('error');
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    if (user) {
-      fetchOrders();
-    }
-  }, [user]);
-
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = 
-      order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      order.carpetName.toLowerCase().includes(searchTerm.toLowerCase());
-      
-    const matchesStatus = filterStatus === "ALL" || order.status === filterStatus;
+    fetchOrders();
+  }, [user, toast]);
+  
+  const filteredOrders = clientOrders.filter(order => {
+    const matchesSearch = searchQuery === "" || 
+      order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.carpetName.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const isCompleted = ["DELIVERY_TIME", "FIRST_REVISED_DELIVERY_DATE", "SECOND_REVISED_DELIVERY_DATE"].includes(order.status);
-    const matchesCompletion = showCompletedOrders || !isCompleted;
+    const matchesStatus = statusFilter === "ALL" || order.status === statusFilter;
     
-    return matchesSearch && matchesStatus && matchesCompletion;
+    return matchesSearch && matchesStatus;
   });
+  
+  const statusCounts = clientOrders.reduce((acc, order) => {
+    acc[order.status] = (acc[order.status] || 0) + 1;
+    return acc;
+  }, {} as Record<OrderStatus, number>);
+  
+  const totalOrders = clientOrders.length;
+  const ordersWithDelay = clientOrders.filter(order => order.hasDelay).length;
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col">
       <Header />
       
       <main className="flex-1 container py-6">
-        {/* Debug Tools - Only shown to admin users */}
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Your Orders</h1>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold mb-2">Order Dashboard</h1>
+            <p className="text-muted-foreground">
+              Track the status of your carpets through the production process.
+            </p>
+          </div>
           <div className="flex gap-2">
             <Button 
               variant="outline" 
@@ -195,158 +126,245 @@ const Dashboard = () => {
               <RefreshCw className="h-4 w-4" />
               Refresh Data
             </Button>
-            {isAdmin() && (
-              <Button 
-                variant={showDebug ? "default" : "outline"} 
-                size="sm" 
-                onClick={() => {
-                  setShowDebug(!showDebug);
-                  if (!showDebug) {
-                    fetchRawRecords();
-                  }
-                }}
-                className="flex items-center gap-2"
-              >
-                <Database className="h-4 w-4" />
-                {showDebug ? "Hide Debug" : "Debug View"}
-              </Button>
-            )}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setShowDebugView(!showDebugView)}
+              className="flex items-center gap-2"
+            >
+              <Database className="h-4 w-4" />
+              {showDebugView ? "Hide Debug View" : "Show Debug View"}
+            </Button>
           </div>
         </div>
         
-        {/* Database Connection Status (Debug) */}
-        {(showDebug || dbConnectionStatus === 'error') && (
-          <div className="mb-6 p-4 border rounded-lg bg-white">
-            <h3 className="font-semibold mb-2">Database Connection Status</h3>
-            <div className="flex items-center gap-2 mb-2">
-              <div 
-                className={`w-3 h-3 rounded-full ${
-                  dbConnectionStatus === 'connected' ? 'bg-green-500' : 
-                  dbConnectionStatus === 'error' ? 'bg-red-500' : 'bg-yellow-500'
-                }`} 
-              />
-              <span>{
-                dbConnectionStatus === 'connected' ? 'Connected to Database' : 
-                dbConnectionStatus === 'error' ? 'Connection Error' : 'Checking Connection...'
-              }</span>
-            </div>
-            
-            {supabaseSession ? (
-              <div className="mt-2 text-sm p-2 bg-green-50 border border-green-200 rounded text-green-800">
-                <p>Authenticated as: {supabaseSession.user?.email}</p>
-                <p>Client code in metadata: {supabaseSession.user?.user_metadata?.clientCode || 'Not set'}</p>
-                <p>Role in metadata: {supabaseSession.user?.user_metadata?.role || 'Not set'}</p>
+        {debugInfo && (
+          <div className="mt-2 mb-4 p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700">
+            {debugInfo}
+          </div>
+        )}
+        
+        {databaseStatus === 'error' && (
+          <div className="mt-2 mb-4 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+            Database connection issue detected. Please check your Supabase connection and permissions.
+          </div>
+        )}
+        
+        {showDebugView && (
+          <div className="mb-6 border rounded-md overflow-hidden">
+            <div className="bg-muted p-3 font-medium">Database Debug View</div>
+            <div className="p-4 space-y-4">
+              <div>
+                <h3 className="text-sm font-semibold mb-2">User Info:</h3>
+                <pre className="text-xs bg-slate-50 p-2 rounded overflow-auto">
+                  {JSON.stringify(user, null, 2)}
+                </pre>
               </div>
-            ) : (
-              <div className="mt-2 text-sm p-2 bg-red-50 border border-red-200 rounded text-red-800">
-                <p>Not authenticated with Supabase</p>
+              
+              <div>
+                <h3 className="text-sm font-semibold mb-2">Database Connection Status:</h3>
+                <div className={`px-2 py-1 rounded inline-flex items-center ${
+                  databaseStatus === 'connected' ? 'bg-green-100 text-green-800' :
+                  databaseStatus === 'error' ? 'bg-red-100 text-red-800' :
+                  'bg-yellow-100 text-yellow-800'
+                }`}>
+                  <span className={`w-2 h-2 rounded-full mr-2 ${
+                    databaseStatus === 'connected' ? 'bg-green-500' :
+                    databaseStatus === 'error' ? 'bg-red-500' :
+                    'bg-yellow-500'
+                  }`}></span>
+                  {databaseStatus === 'connected' ? 'Connected' :
+                   databaseStatus === 'error' ? 'Error' : 'Unknown'}
+                </div>
               </div>
-            )}
-            
-            {dbConnectionStatus === 'error' && (
-              <div className="mt-2 text-sm p-2 bg-red-50 border border-red-200 rounded text-red-800">
-                <p>Troubleshooting Tips:</p>
-                <ul className="list-disc ml-5 mt-1">
-                  <li>Check if RLS policies are correctly set up</li>
-                  <li>Verify your Supabase connection settings</li>
-                  <li>Make sure you're authenticated properly</li>
-                </ul>
-              </div>
-            )}
-            
-            {showDebug && (
-              <div className="mt-4">
-                <h4 className="font-semibold mb-2">Raw Records ({rawRecords.length})</h4>
+              
+              <div>
+                <h3 className="text-sm font-semibold mb-2">Raw CarpetOrder Records (First 10):</h3>
                 {rawRecords.length > 0 ? (
-                  <div className="overflow-auto max-h-64 border rounded">
-                    <pre className="p-2 text-xs">{JSON.stringify(rawRecords, null, 2)}</pre>
+                  <div className="overflow-x-auto">
+                    <Table className="text-xs">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Carpetno</TableHead>
+                          <TableHead>Buyercode</TableHead>
+                          <TableHead>Design</TableHead>
+                          <TableHead>Size</TableHead>
+                          <TableHead>STATUS</TableHead>
+                          <TableHead>Order issued</TableHead>
+                          <TableHead>Delivery Date</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {rawRecords.map((record, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell>{record.Carpetno || 'N/A'}</TableCell>
+                            <TableCell className={record.Buyercode === user?.clientCode ? 'bg-green-100' : ''}>
+                              {record.Buyercode || 'N/A'}
+                            </TableCell>
+                            <TableCell>{record.Design || 'N/A'}</TableCell>
+                            <TableCell>{record.Size || 'N/A'}</TableCell>
+                            <TableCell>{record.STATUS || 'N/A'}</TableCell>
+                            <TableCell>{record["Order issued"] || 'N/A'}</TableCell>
+                            <TableCell>{record["Delivery Date"] || 'N/A'}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">No raw records found in database.</p>
+                  <p className="text-sm text-red-500">No records found in CarpetOrder table!</p>
                 )}
               </div>
-            )}
-          </div>
-        )}
-        
-        {/* Filters and Search */}
-        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center">
-            <Input
-              type="search"
-              placeholder="Search order number or carpet name..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="md:w-64"
-            />
-            
-            <div className="relative">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="md:ml-2 flex items-center gap-2">
-                    <Filter className="h-4 w-4" />
-                    {filterStatus === "ALL" ? "Filter by Status" : getStatusDisplayInfo(filterStatus as OrderStatus).label}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-56">
-                  {allStatuses.map((status) => (
-                    <DropdownMenuItem 
-                      key={status} 
-                      onClick={() => setFilterStatus(status)}
-                      className={filterStatus === status ? "bg-muted" : ""}
-                    >
-                      {status === "ALL" ? "All Statuses" : getStatusDisplayInfo(status as OrderStatus).label}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              
+              <div>
+                <h3 className="text-sm font-semibold mb-2">Database Troubleshooting:</h3>
+                <div className="bg-slate-50 p-3 rounded text-sm">
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Make sure your CarpetOrder table exists in Supabase</li>
+                    <li>Check that <strong>Buyercode column exists</strong> and contains records with value "WS"</li>
+                    <li>Verify that <strong>Carpetno column exists</strong> and has values (this is used as the order ID)</li>
+                    <li>Ensure proper permissions are set for anonymous access to the CarpetOrder table</li>
+                    <li>If database issues persist, the app will use sample data as a fallback</li>
+                  </ul>
+                </div>
+              </div>
             </div>
           </div>
-          
-          <label className="inline-flex items-center space-x-2 text-sm text-muted-foreground cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showCompletedOrders}
-              onChange={(e) => setShowCompletedOrders(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            <span>Show Completed Orders</span>
-          </label>
-        </div>
+        )}
         
-        {/* Loading indicator */}
-        {isLoading && (
-          <div className="flex items-center justify-center">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-64">
             <Loader2 className="h-8 w-8 animate-spin text-tibet-red" />
+            <span className="ml-2">Loading orders...</span>
           </div>
-        )}
-        
-        {!isLoading && filteredOrders.length === 0 && (
-          <div className="text-center py-12">
-            <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-2">No Orders Found</h3>
-            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-              {searchTerm || filterStatus !== "ALL" 
-                ? "No orders match your current filters. Try adjusting your search or filter criteria."
-                : "We couldn't find any orders for your account."}
-            </p>
-            {(searchTerm || filterStatus !== "ALL") && (
-              <Button onClick={() => {
-                setSearchTerm("");
-                setFilterStatus("ALL");
-              }}>
-                Clear Filters
-              </Button>
+        ) : (
+          <>
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+              <div className="bg-white rounded-lg border p-4 flex items-center gap-4">
+                <div className="bg-tibet-red/10 p-2 rounded-full">
+                  <CheckCheck className="h-5 w-5 text-tibet-red" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total Orders</p>
+                  <p className="text-2xl font-bold">{totalOrders}</p>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-lg border p-4 flex items-center gap-4">
+                <div className="bg-red-100 p-2 rounded-full">
+                  <svg className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Orders with Delays</p>
+                  <p className="text-2xl font-bold">{ordersWithDelay}</p>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-lg border p-4 flex items-center gap-4">
+                <div className="bg-green-100 p-2 rounded-full">
+                  <svg className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Finished</p>
+                  <p className="text-2xl font-bold">{statusCounts["FINISHING"] || 0}</p>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-lg border p-4 flex items-center gap-4">
+                <div className="bg-yellow-100 p-2 rounded-full">
+                  <svg className="h-5 w-5 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">In Production</p>
+                  <p className="text-2xl font-bold">
+                    {totalOrders - (statusCounts["FINISHING"] || 0)}
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex flex-col md:flex-row gap-4 mb-6">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by order number or name..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                <Button
+                  variant={statusFilter === "ALL" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setStatusFilter("ALL")}
+                  className={statusFilter === "ALL" ? "bg-tibet-red hover:bg-tibet-red/90" : ""}
+                >
+                  All
+                </Button>
+                
+                {STATUS_LIST.map((status) => {
+                  const { label } = getStatusDisplayInfo(status);
+                  return (
+                    <Button
+                      key={status}
+                      variant={statusFilter === status ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setStatusFilter(status)}
+                      className={statusFilter === status ? "bg-tibet-red hover:bg-tibet-red/90" : ""}
+                    >
+                      {label}
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
+            
+            {clientOrders.length === 0 ? (
+              <div className="text-center py-12 border rounded-lg bg-orange-50 border-orange-200">
+                <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 mb-4">
+                  <AlertTriangle className="h-6 w-6 text-orange-500" />
+                </div>
+                <h3 className="text-lg font-medium">No Orders Found</h3>
+                <p className="text-muted-foreground mt-2 max-w-md mx-auto">
+                  We couldn't find any orders for client code: <strong>{user?.clientCode}</strong>
+                </p>
+                <div className="mt-4 text-sm text-slate-600 p-4 bg-slate-50 rounded-md max-w-md mx-auto">
+                  <p className="font-bold">Troubleshooting Tips:</p>
+                  <ul className="mt-2 list-disc text-left pl-5">
+                    <li>Check that you have records in the CarpetOrder table</li>
+                    <li>Verify that the Buyercode column <strong>exactly equals "WS"</strong> (case sensitive, no spaces)</li>
+                    <li>Make sure the records have values for Carpetno and other required fields</li>
+                    <li>Try toggling "Show Debug View" to see your raw database records</li>
+                    <li>Refresh the page and check the debug output for more information</li>
+                  </ul>
+                </div>
+              </div>
+            ) : filteredOrders.length > 0 ? (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {filteredOrders.map((order) => (
+                  <OrderCard key={order.id} order={order} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-4">
+                  <Filter className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-medium">No matching orders found</h3>
+                <p className="text-muted-foreground mt-2">
+                  Try adjusting your search or filters
+                </p>
+              </div>
             )}
-          </div>
-        )}
-        
-        {!isLoading && filteredOrders.length > 0 && (
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {filteredOrders.map((order) => (
-              <OrderCard key={order.id} order={order} />
-            ))}
-          </div>
+          </>
         )}
       </main>
       

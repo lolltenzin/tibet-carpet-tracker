@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,7 +8,7 @@ import { StatusTimeline } from "@/components/StatusTimeline";
 import { Button } from "@/components/ui/button";
 import { getOrderById } from "@/lib/data";
 import { ArrowLeft, Calendar, Clock, Loader2 } from "lucide-react";
-import { Order, OrderStatus } from "@/types";
+import { Order } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 
 const OrderDetail = () => {
@@ -40,28 +41,7 @@ const OrderDetail = () => {
     fetchOrder();
   }, [orderId, toast]);
 
-  const hasAccess = order && user && (order.clientCode === user.clientCode || user.role === 'admin');
-
-  // Define the order of statuses for displaying in the timeline
-  const statusOrder: OrderStatus[] = [
-    'ORDER_APPROVAL',
-    'YARN_ISSUED',
-    'DYEING',
-    'DYEING_READY',
-    'ONLOOM',
-    'OFFLOOM',
-    'FINISHING',
-    'DELIVERY_TIME',
-  ];
-
-  // Filter the timeline to only show the specified status order
-  const relevantTimeline = order?.timeline
-    .filter(item => statusOrder.includes(item.stage))
-    .sort((a, b) => {
-      const aIndex = statusOrder.indexOf(a.stage);
-      const bIndex = statusOrder.indexOf(b.stage);
-      return aIndex - bIndex;
-    }) || [];
+  const hasAccess = order && user && order.clientCode === user.clientCode;
 
   if (isLoading) {
     return (
@@ -178,7 +158,7 @@ const OrderDetail = () => {
             <div className="bg-white rounded-lg border p-6">
               <h2 className="text-lg font-medium mb-6">Production Timeline</h2>
               <StatusTimeline 
-                timeline={relevantTimeline}
+                timeline={order.timeline}
                 currentStatus={order.status}
               />
             </div>
@@ -196,7 +176,6 @@ const OrderDetail = () => {
                 <StatusBadge status={order.status} size="lg" />
                 <p className="mt-2 text-sm">
                   {order.status === "ORDER_APPROVAL" && "Raw materials have been selected and issued for production."}
-                  {order.status === "YARN_ISSUED" && "Yarn has been issued to start the production process."}
                   {order.status === "RENDERING" && "Design artwork/rendering is being prepared."}
                   {order.status === "DYEING" && "Your carpet's yarn is being dyed to match your color specifications."}
                   {order.status === "DYEING_READY" && "Dyed yarn is ready for further processing."}
