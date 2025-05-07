@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/Header";
 import { OrderCard } from "@/components/OrderCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { getOrdersByClient, getAllOrders } from "@/lib/data";
+import { getOrdersByClient, getAllOrders, mapCarpetOrderToOrder } from "@/lib/data";
 import { Order, OrderStatus } from "@/types";
 import { getStatusDisplayInfo } from "@/lib/data";
 import { CheckCheck, Filter, Search, Loader2, AlertTriangle, Database, RefreshCw } from "lucide-react";
@@ -128,8 +127,7 @@ const Dashboard = () => {
             console.error("Error fetching orders via Supabase:", error);
           } else if (data && data.length > 0) {
             console.log("Found orders via direct Supabase query:", data);
-            // Map the raw data to our Order type
-            import { mapCarpetOrderToOrder } from '@/lib/data';
+            // Map the raw data to our Order type - using the imported function
             fetchedOrders = data.map(mapCarpetOrderToOrder);
           }
         }
