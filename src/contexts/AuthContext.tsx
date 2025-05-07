@@ -22,21 +22,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   
-  // Attempt to reconnect to Supabase on component mount
+  // Check for existing Supabase session on mount
   useEffect(() => {
-    const reconnectToSupabase = async () => {
+    const checkSupabaseSession = async () => {
       // Check the current session status
       const { data, error } = await supabase.auth.getSession();
       
       if (error) {
         console.error("Error checking Supabase session:", error);
-      } else {
+      } else if (data.session) {
         console.log("Current Supabase session:", data);
+        
+        // If we have a session but no user in state, attempt to restore user from metadata
+        if (!user && data.session.user.user_metadata.clientCode) {
+          const clientCode = data.session.user.user_metadata.clientCode;
+          const role = data.session.user.user_metadata.role;
+          const restoredUser = {
+            id: data.session.user.id,
+            username: data.session.user.email || clientCode,
+            clientCode: clientCode,
+            clientName: clientCode, // Would be better to fetch from somewhere
+            role: role || 'client'
+          };
+          
+          setUser(restoredUser);
+          localStorage.setItem('tibet_carpet_user', JSON.stringify(restoredUser));
+        }
       }
     };
     
-    reconnectToSupabase();
-  }, []);
+    checkSupabaseSession();
+  }, [user]);
   
   useEffect(() => {
     // Check if user is logged in from localStorage
@@ -61,16 +77,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       console.log("Attempting to sign in with Supabase for user:", user.username);
       
-      // For testing purposes, use anonymous sign-in instead of password auth
-      // This helps bypass authentication issues during development
-      const { data, error } = await supabase.auth.signInAnonymously();
+      // Use email/password sign-in with a fixed pattern
+      // This is a temporary solution - in a real app, this would use proper credentials
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: `${user.username.toLowerCase()}@tibetcarpet.test`,
+        password: 'Carpet123!' // Use a standard password for all test accounts
+      });
       
       if (error) {
         console.error("Failed to sign in with Supabase:", error);
+        
+        // If login fails, try to create the user first
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: `${user.username.toLowerCase()}@tibetcarpet.test`,
+          password: 'Carpet123!',
+          options: {
+            data: { 
+              clientCode: user.clientCode,
+              role: user.role
+            }
+          }
+        });
+        
+        if (signUpError) {
+          console.error("Failed to sign up with Supabase:", signUpError);
+        } else {
+          console.log("Successfully signed up with Supabase:", signUpData);
+        }
       } else {
         console.log("Successfully signed in with Supabase:", data);
         
-        // Set client role metadata to help with RLS policies
+        // Update user metadata if needed
         const { error: updateError } = await supabase.auth.updateUser({
           data: { 
             clientCode: user.clientCode,
