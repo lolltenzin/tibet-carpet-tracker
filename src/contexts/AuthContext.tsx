@@ -77,10 +77,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       console.log("Attempting to sign in with Supabase for user:", user.username);
       
+      // Use a valid email format for Supabase authentication
+      const email = `${user.username.toLowerCase()}@example.com`;
+      
       // Use email/password sign-in with a fixed pattern
-      // This is a temporary solution - in a real app, this would use proper credentials
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: `${user.username.toLowerCase()}@tibetcarpet.test`,
+        email: email,
         password: 'Carpet123!' // Use a standard password for all test accounts
       });
       
@@ -89,7 +91,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         // If login fails, try to create the user first
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: `${user.username.toLowerCase()}@tibetcarpet.test`,
+          email: email,
           password: 'Carpet123!',
           options: {
             data: { 

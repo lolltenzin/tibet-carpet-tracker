@@ -29,6 +29,7 @@ const Dashboard = () => {
   const [showDebug, setShowDebug] = useState(false);
   const [dbConnectionStatus, setDbConnectionStatus] = useState<'checking' | 'connected' | 'error'>('checking');
   const [rawRecords, setRawRecords] = useState<any[]>([]);
+  const [supabaseSession, setSupabaseSession] = useState<any>(null);
   const { toast } = useToast();
 
   // List of all possible order statuses to use in the filter
@@ -47,6 +48,17 @@ const Dashboard = () => {
     "FIRST_REVISED_DELIVERY_DATE",
     "SECOND_REVISED_DELIVERY_DATE"
   ];
+
+  // Check Supabase session
+  const checkSupabaseAuth = async () => {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) {
+      console.error("Error checking Supabase session:", error);
+    } else {
+      setSupabaseSession(data.session);
+      console.log("Current Supabase session in Dashboard:", data);
+    }
+  };
 
   // Function to check database connection
   const checkDbConnection = async () => {
@@ -70,9 +82,13 @@ const Dashboard = () => {
   // Fetch raw records for debugging
   const fetchRawRecords = async () => {
     try {
+      console.log("Fetching raw records...");
+      console.log("Current Buyercode:", user?.clientCode);
+      
       const { data, error } = await supabase
         .from('CarpetOrder')
-        .select('*');
+        .select('*')
+        .eq('Buyercode', user?.clientCode);
       
       if (error) {
         console.error("Error fetching raw records:", error);
@@ -89,7 +105,8 @@ const Dashboard = () => {
     if (!user) return;
     
     setIsLoading(true);
-    checkDbConnection();
+    await checkSupabaseAuth();
+    await checkDbConnection();
     
     try {
       let fetchedOrders: Order[];
@@ -98,6 +115,24 @@ const Dashboard = () => {
         fetchedOrders = await getAllOrders();
       } else {
         fetchedOrders = await getOrdersByClient(user.clientCode);
+        
+        // If no orders found via the API, try direct Supabase query as fallback
+        if (fetchedOrders.length === 0) {
+          console.log("No orders found via API, trying direct Supabase query...");
+          const { data, error } = await supabase
+            .from('CarpetOrder')
+            .select('*')
+            .eq('Buyercode', user.clientCode);
+            
+          if (error) {
+            console.error("Error fetching orders via Supabase:", error);
+          } else if (data && data.length > 0) {
+            console.log("Found orders via direct Supabase query:", data);
+            // Map the raw data to our Order type
+            import { mapCarpetOrderToOrder } from '@/lib/data';
+            fetchedOrders = data.map(mapCarpetOrderToOrder);
+          }
+        }
       }
       
       if (showDebug && isAdmin()) {
@@ -152,17 +187,17 @@ const Dashboard = () => {
         {/* Debug Tools - Only shown to admin users */}
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl font-bold">Your Orders</h1>
-          {isAdmin() && (
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={fetchOrders}
-                className="flex items-center gap-2"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Refresh Data
-              </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={fetchOrders}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Refresh Data
+            </Button>
+            {isAdmin() && (
               <Button 
                 variant={showDebug ? "default" : "outline"} 
                 size="sm" 
@@ -177,12 +212,12 @@ const Dashboard = () => {
                 <Database className="h-4 w-4" />
                 {showDebug ? "Hide Debug" : "Debug View"}
               </Button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
         
-        {/* Database Connection Status (Debug) - Only visible to admins */}
-        {showDebug && isAdmin() && (
+        {/* Database Connection Status (Debug) */}
+        {(showDebug || dbConnectionStatus === 'error') && (
           <div className="mb-6 p-4 border rounded-lg bg-white">
             <h3 className="font-semibold mb-2">Database Connection Status</h3>
             <div className="flex items-center gap-2 mb-2">
@@ -198,6 +233,18 @@ const Dashboard = () => {
               }</span>
             </div>
             
+            {supabaseSession ? (
+              <div className="mt-2 text-sm p-2 bg-green-50 border border-green-200 rounded text-green-800">
+                <p>Authenticated as: {supabaseSession.user?.email}</p>
+                <p>Client code in metadata: {supabaseSession.user?.user_metadata?.clientCode || 'Not set'}</p>
+                <p>Role in metadata: {supabaseSession.user?.user_metadata?.role || 'Not set'}</p>
+              </div>
+            ) : (
+              <div className="mt-2 text-sm p-2 bg-red-50 border border-red-200 rounded text-red-800">
+                <p>Not authenticated with Supabase</p>
+              </div>
+            )}
+            
             {dbConnectionStatus === 'error' && (
               <div className="mt-2 text-sm p-2 bg-red-50 border border-red-200 rounded text-red-800">
                 <p>Troubleshooting Tips:</p>
@@ -209,16 +256,18 @@ const Dashboard = () => {
               </div>
             )}
             
-            <div className="mt-4">
-              <h4 className="font-semibold mb-2">Raw Records ({rawRecords.length})</h4>
-              {rawRecords.length > 0 ? (
-                <div className="overflow-auto max-h-64 border rounded">
-                  <pre className="p-2 text-xs">{JSON.stringify(rawRecords, null, 2)}</pre>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No raw records found in database.</p>
-              )}
-            </div>
+            {showDebug && (
+              <div className="mt-4">
+                <h4 className="font-semibold mb-2">Raw Records ({rawRecords.length})</h4>
+                {rawRecords.length > 0 ? (
+                  <div className="overflow-auto max-h-64 border rounded">
+                    <pre className="p-2 text-xs">{JSON.stringify(rawRecords, null, 2)}</pre>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No raw records found in database.</p>
+                )}
+              </div>
+            )}
           </div>
         )}
         

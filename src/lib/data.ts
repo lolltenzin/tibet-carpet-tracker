@@ -1,3 +1,4 @@
+
 import { Order, OrderStatus, ClientCode, User } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -261,7 +262,7 @@ const buildOrderTimeline = (status: OrderStatus, orderIssuedDate?: string, deliv
 };
 
 // Helper function to map database records to our Order type
-const mapCarpetOrderToOrder = (record: any): Order => {
+export const mapCarpetOrderToOrder = (record: any): Order => {
   console.log("Mapping record:", record); // Added debugging
   
   // Map STATUS to one of our predefined statuses with normalization
