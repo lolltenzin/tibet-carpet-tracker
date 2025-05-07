@@ -22,6 +22,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   
+  // Attempt to reconnect to Supabase on component mount
+  useEffect(() => {
+    const reconnectToSupabase = async () => {
+      // Check the current session status
+      const { data, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error("Error checking Supabase session:", error);
+      } else {
+        console.log("Current Supabase session:", data);
+      }
+    };
+    
+    reconnectToSupabase();
+  }, []);
+  
   useEffect(() => {
     // Check if user is logged in from localStorage
     const storedUser = localStorage.getItem('tibet_carpet_user');
@@ -31,7 +47,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(parsedUser);
         
         // After retrieving the user from localStorage, also sign in with Supabase
-        // using a custom token for the RLS policies to work
         signInWithSupabase(parsedUser);
       } catch (e) {
         console.error("Failed to parse stored user", e);
@@ -41,19 +56,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(false);
   }, []);
 
-  // Helper function to sign in with Supabase using a custom token
+  // Helper function to sign in with Supabase
   const signInWithSupabase = async (user: User) => {
     try {
-      // Since we don't have real auth yet, we'll use custom JWT or session
-      // Here we're simulating a session by signing in anonymously with custom claims
-      // In a real app, this would be replaced with proper auth
-      const { error } = await supabase.auth.signInWithPassword({
-        email: `${user.username}@example.com`, // simulated email
-        password: 'password', // simulated password
-      });
+      console.log("Attempting to sign in with Supabase for user:", user.username);
+      
+      // For testing purposes, use anonymous sign-in instead of password auth
+      // This helps bypass authentication issues during development
+      const { data, error } = await supabase.auth.signInAnonymously();
       
       if (error) {
         console.error("Failed to sign in with Supabase:", error);
+      } else {
+        console.log("Successfully signed in with Supabase:", data);
+        
+        // Set client role metadata to help with RLS policies
+        const { error: updateError } = await supabase.auth.updateUser({
+          data: { 
+            clientCode: user.clientCode,
+            role: user.role
+          }
+        });
+        
+        if (updateError) {
+          console.error("Failed to update user metadata:", updateError);
+        }
       }
     } catch (error) {
       console.error("Error during Supabase sign in:", error);
