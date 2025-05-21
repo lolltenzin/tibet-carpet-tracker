@@ -5,7 +5,7 @@ import { Header } from "@/components/Header";
 import { OrderCard } from "@/components/OrderCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { getOrdersByClient, getAllOrders } from "@/lib/data";
+import { getOrdersByClient, getAllOrders, mapCarpetOrderToOrder } from "@/lib/data";
 import { Order, OrderStatus } from "@/types";
 import { getStatusDisplayInfo } from "@/lib/data";
 import { CheckCheck, Filter, Search, Loader2, AlertTriangle, Database, RefreshCw } from "lucide-react";
@@ -92,14 +92,44 @@ const Dashboard = () => {
     checkDbConnection();
     
     try {
-      let fetchedOrders: Order[];
+      let fetchedOrders: Order[] = [];
       
       if (user.role === "admin") {
-        fetchedOrders = await getAllOrders();
+        // For admin users, attempt to get all orders
+        const { data, error } = await supabase.from('CarpetOrder').select('*');
+        
+        if (error) {
+          console.error("Error fetching orders for admin:", error);
+        } else if (data && data.length > 0) {
+          console.log("Admin view - Found orders:", data);
+          fetchedOrders = data.map(mapCarpetOrderToOrder);
+        }
       } else {
-        fetchedOrders = await getOrdersByClient(user.clientCode);
+        // For regular clients, get only their orders
+        const { data, error } = await supabase
+          .from('CarpetOrder')
+          .select('*')
+          .eq('Buyercode', user.clientCode);
+          
+        if (error) {
+          console.error("Error fetching client orders:", error);
+        } else if (data && data.length > 0) {
+          console.log(`Client ${user.clientCode} - Found orders:`, data);
+          fetchedOrders = data.map(mapCarpetOrderToOrder);
+        }
       }
       
+      // If no orders found via direct query, try fallback methods
+      if (fetchedOrders.length === 0) {
+        console.log("No orders found via direct query, trying fallback API methods...");
+        if (user.role === "admin") {
+          fetchedOrders = await getAllOrders();
+        } else {
+          fetchedOrders = await getOrdersByClient(user.clientCode);
+        }
+      }
+      
+      // Debug mode for seeing raw records
       if (showDebug) {
         await fetchRawRecords();
       }
