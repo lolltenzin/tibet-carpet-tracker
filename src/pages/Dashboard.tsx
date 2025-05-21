@@ -5,8 +5,9 @@ import { Header } from "@/components/Header";
 import { OrderCard } from "@/components/OrderCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { getOrdersByClient, getAllOrders, getStatusDisplayInfo } from "@/lib/data";
+import { getOrdersByClient, getAllOrders, mapCarpetOrderToOrder } from "@/lib/data";
 import { Order, OrderStatus } from "@/types";
+import { getStatusDisplayInfo } from "@/lib/data";
 import { CheckCheck, Filter, Search, Loader2, AlertTriangle, Database, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -56,11 +57,6 @@ const Dashboard = () => {
       if (error) {
         console.error("Database connection error:", error);
         setDbConnectionStatus('error');
-        toast({
-          title: "Database connection error",
-          description: `${error.message}. Please check RLS policies and authentication.`,
-          variant: "destructive"
-        });
       } else {
         console.log("Database connected successfully");
         setDbConnectionStatus('connected');
@@ -68,37 +64,18 @@ const Dashboard = () => {
     } catch (error) {
       console.error("Exception checking DB connection:", error);
       setDbConnectionStatus('error');
-      toast({
-        title: "Database connection failed",
-        description: "Could not connect to database. Please check your network connection.",
-        variant: "destructive"
-      });
     }
   };
 
   // Fetch raw records for debugging
   const fetchRawRecords = async () => {
     try {
-      // First check if connected
-      if (dbConnectionStatus !== 'connected') {
-        await checkDbConnection();
-        if (dbConnectionStatus === 'error') {
-          console.error("Cannot fetch raw records due to connection issues");
-          return;
-        }
-      }
-      
       const { data, error } = await supabase
         .from('CarpetOrder')
         .select('*');
       
       if (error) {
         console.error("Error fetching raw records:", error);
-        toast({
-          title: "Error fetching data",
-          description: error.message,
-          variant: "destructive"
-        });
       } else {
         setRawRecords(data || []);
         console.log("Raw records:", data);
@@ -108,119 +85,14 @@ const Dashboard = () => {
     }
   };
   
-  // Helper function to map database records to our Order type
-  const mapCarpetOrderToOrder = (record: any): Order => {
-    console.log("Mapping record:", record);
-    
-    // Map STATUS to one of our predefined statuses with normalization
-    const normalizeStatus = (status: string): OrderStatus => {
-      // Convert to uppercase and replace spaces with underscores
-      const normalized = status?.trim().toUpperCase().replace(/\s+/g, '_') || 'ORDER_APPROVAL';
-      
-      // Map common variations to our defined OrderStatus types
-      const statusMap: Record<string, OrderStatus> = {
-        'ORDER_APPROVAL': 'ORDER_APPROVAL',
-        'ORDER_ISSUED': 'ORDER_APPROVAL',
-        'YARN_ISSUED': 'YARN_ISSUED',
-        'RENDERING': 'RENDERING',
-        'DYEING': 'DYEING',
-        'DYEING_READY': 'DYEING_READY',
-        'WAITING_FOR_LOOM': 'WAITING_FOR_LOOM',
-        'ONLOOM': 'ONLOOM',
-        'ONLOOM_PROGRESS': 'ONLOOM_PROGRESS',
-        'OFFLOOM': 'OFFLOOM',
-        'FINISHING': 'FINISHING',
-        'DELIVERY_TIME': 'DELIVERY_TIME',
-        'DELIVERY': 'DELIVERY_TIME',
-        'FIRST_REVISED_DELIVERY_DATE': 'FIRST_REVISED_DELIVERY_DATE',
-        'SECOND_REVISED_DELIVERY_DATE': 'SECOND_REVISED_DELIVERY_DATE'
-      };
-      
-      return statusMap[normalized] || 'ORDER_APPROVAL';
-    };
-    
-    // Build timeline based on current status
-    const buildOrderTimeline = (status: OrderStatus, orderIssuedDate?: string, deliveryDate?: string): Order['timeline'] => {
-      // Define the order of statuses for the timeline display
-      const allStatuses: OrderStatus[] = [
-        'ORDER_APPROVAL',
-        'YARN_ISSUED',
-        'DYEING',
-        'DYEING_READY',
-        'ONLOOM',
-        'OFFLOOM',
-        'FINISHING',
-        'DELIVERY_TIME'
-      ];
-      
-      // Get the index of the current status in our sequence
-      const currentStatusInfo = getStatusDisplayInfo(status);
-      const currentOrder = currentStatusInfo.order;
-      
-      // Build timeline with completion status based on the current status
-      return allStatuses.map(stage => {
-        const stageInfo = getStatusDisplayInfo(stage);
-        const isCompleted = stageInfo.order <= currentOrder;
-        
-        // Determine the date for this stage
-        let stageDate: string | undefined;
-        
-        if (stage === 'ORDER_APPROVAL' && orderIssuedDate) {
-          stageDate = orderIssuedDate;
-        } else if ((stage === 'DELIVERY_TIME' || stage === 'FINISHING') && deliveryDate) {
-          stageDate = deliveryDate;
-        } else if (isCompleted) {
-          // For completed stages without specific dates, use estimated dates based on progress
-          const today = new Date();
-          const orderDate = orderIssuedDate ? new Date(orderIssuedDate) : new Date();
-          const deliveryDateObj = deliveryDate ? new Date(deliveryDate) : new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
-          
-          // Calculate a date between order and delivery based on the stage's position
-          const totalDuration = deliveryDateObj.getTime() - orderDate.getTime();
-          const stagePosition = allStatuses.indexOf(stage) / (allStatuses.length - 1);
-          const estimatedTime = orderDate.getTime() + (totalDuration * stagePosition);
-          
-          stageDate = new Date(estimatedTime).toISOString();
-        }
-        
-        return {
-          stage,
-          date: stageDate,
-          completed: isCompleted
-        };
-      });
-    };
-    
-    const status = normalizeStatus(record.STATUS || "ORDER_APPROVAL");
-    const clientCode = record.Buyercode || "WS";
-    const timeline = buildOrderTimeline(status, record["Order issued"], record["Delivery Date"]);
-    
-    return {
-      id: record.Carpetno,
-      clientCode: clientCode,
-      orderNumber: record.Carpetno,
-      carpetName: record.Design || "Unnamed Design",
-      dimensions: record.Size || "Unknown",
-      status: status,
-      hasDelay: false,
-      timeline: timeline,
-      estimatedCompletion: record["Delivery Date"] || undefined
-    };
-  };
-  
   const fetchOrders = async () => {
     if (!user) return;
     
     setIsLoading(true);
-    await checkDbConnection();
+    checkDbConnection();
     
     try {
       let fetchedOrders: Order[] = [];
-      
-      // Only proceed if we have a successful database connection
-      if (dbConnectionStatus === 'error') {
-        throw new Error("Cannot fetch orders due to database connection issues");
-      }
       
       if (user.role === "admin") {
         // For admin users, attempt to get all orders
@@ -228,10 +100,9 @@ const Dashboard = () => {
         
         if (error) {
           console.error("Error fetching orders for admin:", error);
-          throw error;
         } else if (data && data.length > 0) {
           console.log("Admin view - Found orders:", data);
-          fetchedOrders = data.map(record => mapCarpetOrderToOrder(record));
+          fetchedOrders = data.map(mapCarpetOrderToOrder);
         }
       } else {
         // For regular clients, get only their orders
@@ -242,10 +113,9 @@ const Dashboard = () => {
           
         if (error) {
           console.error("Error fetching client orders:", error);
-          throw error;
         } else if (data && data.length > 0) {
           console.log(`Client ${user.clientCode} - Found orders:`, data);
-          fetchedOrders = data.map(record => mapCarpetOrderToOrder(record));
+          fetchedOrders = data.map(mapCarpetOrderToOrder);
         }
       }
       
@@ -273,30 +143,13 @@ const Dashboard = () => {
           variant: "default"
         });
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching orders:", error);
       toast({
         title: "Error loading orders",
-        description: error.message || "There was a problem loading your orders. Please try again.",
+        description: "There was a problem loading your orders. Please try again.",
         variant: "destructive"
       });
-      
-      // Generate sample data as a fallback
-      setOrders([{
-        id: `SAMPLE-${user.clientCode}-001`,
-        clientCode: user.clientCode,
-        orderNumber: `SAMPLE-${user.clientCode}-001`,
-        carpetName: "Sample Carpet",
-        dimensions: "8x10",
-        status: "ORDER_APPROVAL",
-        hasDelay: false,
-        timeline: [
-          { stage: "ORDER_APPROVAL", date: new Date().toISOString(), completed: true },
-          { stage: "RENDERING", date: undefined, completed: false },
-          { stage: "FINISHING", date: undefined, completed: false }
-        ],
-        estimatedCompletion: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-      }]);
     } finally {
       setIsLoading(false);
     }
@@ -307,12 +160,6 @@ const Dashboard = () => {
       fetchOrders();
     }
   }, [user]);
-
-  useEffect(() => {
-    if (showDebug) {
-      fetchRawRecords();
-    }
-  }, [showDebug]);
 
   const filteredOrders = orders.filter(order => {
     const matchesSearch = 
@@ -350,6 +197,9 @@ const Dashboard = () => {
               size="sm" 
               onClick={() => {
                 setShowDebug(!showDebug);
+                if (!showDebug) {
+                  fetchRawRecords();
+                }
               }}
               className="flex items-center gap-2"
             >
