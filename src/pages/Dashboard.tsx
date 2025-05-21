@@ -5,7 +5,7 @@ import { Header } from "@/components/Header";
 import { OrderCard } from "@/components/OrderCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { getStatusDisplayInfo } from "@/lib/data";
+import { getOrdersByClient, getAllOrders, getStatusDisplayInfo } from "@/lib/data";
 import { Order, OrderStatus } from "@/types";
 import { CheckCheck, Filter, Search, Loader2, AlertTriangle, Database, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const Dashboard = () => {
-  const { user, session } = useAuth();
+  const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -209,6 +209,8 @@ const Dashboard = () => {
   };
   
   const fetchOrders = async () => {
+    if (!user) return;
+    
     setIsLoading(true);
     await checkDbConnection();
     
@@ -220,45 +222,41 @@ const Dashboard = () => {
         throw new Error("Cannot fetch orders due to database connection issues");
       }
       
-      const { data, error } = await supabase
-        .from('CarpetOrder')
-        .select('*');
-
-      if (error) {
-        console.error("Error fetching orders:", error);
-        throw error;
-      }
-
-      if (data && data.length > 0) {
-        console.log("Found orders:", data);
-        fetchedOrders = data.map(record => mapCarpetOrderToOrder(record));
+      if (user.role === "admin") {
+        // For admin users, attempt to get all orders
+        const { data, error } = await supabase.from('CarpetOrder').select('*');
+        
+        if (error) {
+          console.error("Error fetching orders for admin:", error);
+          throw error;
+        } else if (data && data.length > 0) {
+          console.log("Admin view - Found orders:", data);
+          fetchedOrders = data.map(record => mapCarpetOrderToOrder(record));
+        }
       } else {
-        console.log("No orders found in database");
-        
-        // Create a sample order if none exist
-        const sampleOrder = {
-          id: `SAMPLE-${user?.clientCode || 'WS'}-001`,
-          clientCode: user?.clientCode || 'WS',
-          orderNumber: `SAMPLE-${user?.clientCode || 'WS'}-001`,
-          carpetName: "Sample Carpet",
-          dimensions: "8x10",
-          status: "ORDER_APPROVAL" as OrderStatus,
-          hasDelay: false,
-          timeline: [
-            { stage: "ORDER_APPROVAL" as OrderStatus, date: new Date().toISOString(), completed: true },
-            { stage: "RENDERING" as OrderStatus, date: undefined, completed: false },
-            { stage: "FINISHING" as OrderStatus, date: undefined, completed: false }
-          ],
-          estimatedCompletion: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-        };
-        
-        fetchedOrders = [sampleOrder];
-        
-        toast({
-          title: "No orders found",
-          description: "Sample data is being shown for demonstration purposes.",
-          variant: "default"
-        });
+        // For regular clients, get only their orders
+        const { data, error } = await supabase
+          .from('CarpetOrder')
+          .select('*')
+          .eq('Buyercode', user.clientCode);
+          
+        if (error) {
+          console.error("Error fetching client orders:", error);
+          throw error;
+        } else if (data && data.length > 0) {
+          console.log(`Client ${user.clientCode} - Found orders:`, data);
+          fetchedOrders = data.map(record => mapCarpetOrderToOrder(record));
+        }
+      }
+      
+      // If no orders found via direct query, try fallback methods
+      if (fetchedOrders.length === 0) {
+        console.log("No orders found via direct query, trying fallback API methods...");
+        if (user.role === "admin") {
+          fetchedOrders = await getAllOrders();
+        } else {
+          fetchedOrders = await getOrdersByClient(user.clientCode);
+        }
       }
       
       // Debug mode for seeing raw records
@@ -267,6 +265,14 @@ const Dashboard = () => {
       }
 
       setOrders(fetchedOrders);
+      
+      if (fetchedOrders.length === 0) {
+        toast({
+          title: "No orders found",
+          description: "We couldn't find any orders for your account. Sample data will be shown instead.",
+          variant: "default"
+        });
+      }
     } catch (error: any) {
       console.error("Error fetching orders:", error);
       toast({
@@ -277,9 +283,9 @@ const Dashboard = () => {
       
       // Generate sample data as a fallback
       setOrders([{
-        id: `SAMPLE-${user?.clientCode || 'WS'}-001`,
-        clientCode: user?.clientCode || 'WS',
-        orderNumber: `SAMPLE-${user?.clientCode || 'WS'}-001`,
+        id: `SAMPLE-${user.clientCode}-001`,
+        clientCode: user.clientCode,
+        orderNumber: `SAMPLE-${user.clientCode}-001`,
         carpetName: "Sample Carpet",
         dimensions: "8x10",
         status: "ORDER_APPROVAL",
@@ -297,8 +303,10 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    fetchOrders();
-  }, [session]);
+    if (user) {
+      fetchOrders();
+    }
+  }, [user]);
 
   useEffect(() => {
     if (showDebug) {
@@ -378,19 +386,6 @@ const Dashboard = () => {
                 </ul>
               </div>
             )}
-            
-            <div className="mt-4">
-              <h4 className="font-semibold mb-2">Authentication Status</h4>
-              <div className="mb-2">
-                <strong>User:</strong> {user ? `${user.clientName} (${user.clientCode})` : 'Not logged in'}
-              </div>
-              <div className="mb-2">
-                <strong>Role:</strong> {user?.role || 'None'}
-              </div>
-              <div className="mb-2">
-                <strong>Supabase Session:</strong> {session ? 'Active' : 'None'}
-              </div>
-            </div>
             
             <div className="mt-4">
               <h4 className="font-semibold mb-2">Raw Records ({rawRecords.length})</h4>
