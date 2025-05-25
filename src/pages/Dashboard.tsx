@@ -51,6 +51,7 @@ const Dashboard = () => {
   const checkDbConnection = async () => {
     setDbConnectionStatus('checking');
     try {
+      // Test the connection by trying to query the CarpetOrder table
       const { data, error } = await supabase.from('CarpetOrder').select('count()', { count: 'exact', head: true });
       
       if (error) {
@@ -58,7 +59,7 @@ const Dashboard = () => {
         setDbConnectionStatus('error');
         toast({
           title: "Database connection error",
-          description: `${error.message}. Please check RLS policies and authentication.`,
+          description: `${error.message}. Using sample data instead.`,
           variant: "destructive"
         });
       } else {
@@ -70,7 +71,7 @@ const Dashboard = () => {
       setDbConnectionStatus('error');
       toast({
         title: "Database connection failed",
-        description: "Could not connect to database. Please check your network connection.",
+        description: "Using sample data instead.",
         variant: "destructive"
       });
     }
@@ -79,32 +80,20 @@ const Dashboard = () => {
   // Fetch raw records for debugging
   const fetchRawRecords = async () => {
     try {
-      // First check if connected
-      if (dbConnectionStatus !== 'connected') {
-        await checkDbConnection();
-        if (dbConnectionStatus === 'error') {
-          console.error("Cannot fetch raw records due to connection issues");
-          return;
-        }
-      }
-      
       const { data, error } = await supabase
         .from('CarpetOrder')
         .select('*');
       
       if (error) {
         console.error("Error fetching raw records:", error);
-        toast({
-          title: "Error fetching data",
-          description: error.message,
-          variant: "destructive"
-        });
+        setRawRecords([]);
       } else {
         setRawRecords(data || []);
         console.log("Raw records:", data);
       }
     } catch (error) {
       console.error("Exception fetching raw records:", error);
+      setRawRecords([]);
     }
   };
   
@@ -112,12 +101,9 @@ const Dashboard = () => {
   const mapCarpetOrderToOrder = (record: any): Order => {
     console.log("Mapping record:", record);
     
-    // Map STATUS to one of our predefined statuses with normalization
     const normalizeStatus = (status: string): OrderStatus => {
-      // Convert to uppercase and replace spaces with underscores
       const normalized = status?.trim().toUpperCase().replace(/\s+/g, '_') || 'ORDER_APPROVAL';
       
-      // Map common variations to our defined OrderStatus types
       const statusMap: Record<string, OrderStatus> = {
         'ORDER_APPROVAL': 'ORDER_APPROVAL',
         'ORDER_ISSUED': 'ORDER_APPROVAL',
@@ -139,9 +125,7 @@ const Dashboard = () => {
       return statusMap[normalized] || 'ORDER_APPROVAL';
     };
     
-    // Build timeline based on current status
     const buildOrderTimeline = (status: OrderStatus, orderIssuedDate?: string, deliveryDate?: string): Order['timeline'] => {
-      // Define the order of statuses for the timeline display
       const allStatuses: OrderStatus[] = [
         'ORDER_APPROVAL',
         'YARN_ISSUED',
@@ -153,16 +137,13 @@ const Dashboard = () => {
         'DELIVERY_TIME'
       ];
       
-      // Get the index of the current status in our sequence
       const currentStatusInfo = getStatusDisplayInfo(status);
       const currentOrder = currentStatusInfo.order;
       
-      // Build timeline with completion status based on the current status
       return allStatuses.map(stage => {
         const stageInfo = getStatusDisplayInfo(stage);
         const isCompleted = stageInfo.order <= currentOrder;
         
-        // Determine the date for this stage
         let stageDate: string | undefined;
         
         if (stage === 'ORDER_APPROVAL' && orderIssuedDate) {
@@ -170,12 +151,10 @@ const Dashboard = () => {
         } else if ((stage === 'DELIVERY_TIME' || stage === 'FINISHING') && deliveryDate) {
           stageDate = deliveryDate;
         } else if (isCompleted) {
-          // For completed stages without specific dates, use estimated dates based on progress
           const today = new Date();
           const orderDate = orderIssuedDate ? new Date(orderIssuedDate) : new Date();
           const deliveryDateObj = deliveryDate ? new Date(deliveryDate) : new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
           
-          // Calculate a date between order and delivery based on the stage's position
           const totalDuration = deliveryDateObj.getTime() - orderDate.getTime();
           const stagePosition = allStatuses.indexOf(stage) / (allStatuses.length - 1);
           const estimatedTime = orderDate.getTime() + (totalDuration * stagePosition);
@@ -210,50 +189,62 @@ const Dashboard = () => {
   
   const fetchOrders = async () => {
     setIsLoading(true);
-    await checkDbConnection();
     
     try {
-      let fetchedOrders: Order[] = [];
+      // Create sample data first as fallback
+      const sampleOrder = {
+        id: `SAMPLE-${user?.clientCode || 'WS'}-001`,
+        clientCode: user?.clientCode || 'WS',
+        orderNumber: `SAMPLE-${user?.clientCode || 'WS'}-001`,
+        carpetName: "Sample Carpet",
+        dimensions: "8x10",
+        status: "ORDER_APPROVAL" as OrderStatus,
+        hasDelay: false,
+        timeline: [
+          { stage: "ORDER_APPROVAL" as OrderStatus, date: new Date().toISOString(), completed: true },
+          { stage: "RENDERING" as OrderStatus, date: undefined, completed: false },
+          { stage: "FINISHING" as OrderStatus, date: undefined, completed: false }
+        ],
+        estimatedCompletion: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      };
+
+      // Try to connect to database
+      await checkDbConnection();
       
-      // Only proceed if we have a successful database connection
       if (dbConnectionStatus === 'error') {
-        throw new Error("Cannot fetch orders due to database connection issues");
+        // Use sample data if connection fails
+        setOrders([sampleOrder]);
+        toast({
+          title: "Using sample data",
+          description: "Could not connect to database. Showing sample data for demonstration.",
+          variant: "default"
+        });
+        return;
       }
-      
+
+      // Try to fetch real data
       const { data, error } = await supabase
         .from('CarpetOrder')
         .select('*');
 
       if (error) {
         console.error("Error fetching orders:", error);
-        throw error;
+        setOrders([sampleOrder]);
+        toast({
+          title: "Using sample data",
+          description: "Could not fetch orders from database. Showing sample data.",
+          variant: "default"
+        });
+        return;
       }
 
       if (data && data.length > 0) {
         console.log("Found orders:", data);
-        fetchedOrders = data.map(record => mapCarpetOrderToOrder(record));
+        const fetchedOrders = data.map(record => mapCarpetOrderToOrder(record));
+        setOrders(fetchedOrders);
       } else {
-        console.log("No orders found in database");
-        
-        // Create a sample order if none exist
-        const sampleOrder = {
-          id: `SAMPLE-${user?.clientCode || 'WS'}-001`,
-          clientCode: user?.clientCode || 'WS',
-          orderNumber: `SAMPLE-${user?.clientCode || 'WS'}-001`,
-          carpetName: "Sample Carpet",
-          dimensions: "8x10",
-          status: "ORDER_APPROVAL" as OrderStatus,
-          hasDelay: false,
-          timeline: [
-            { stage: "ORDER_APPROVAL" as OrderStatus, date: new Date().toISOString(), completed: true },
-            { stage: "RENDERING" as OrderStatus, date: undefined, completed: false },
-            { stage: "FINISHING" as OrderStatus, date: undefined, completed: false }
-          ],
-          estimatedCompletion: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-        };
-        
-        fetchedOrders = [sampleOrder];
-        
+        console.log("No orders found in database, using sample data");
+        setOrders([sampleOrder]);
         toast({
           title: "No orders found",
           description: "Sample data is being shown for demonstration purposes.",
@@ -261,50 +252,47 @@ const Dashboard = () => {
         });
       }
       
-      // Debug mode for seeing raw records
-      if (showDebug) {
-        await fetchRawRecords();
-      }
-
-      setOrders(fetchedOrders);
     } catch (error: any) {
       console.error("Error fetching orders:", error);
-      toast({
-        title: "Error loading orders",
-        description: error.message || "There was a problem loading your orders. Please try again.",
-        variant: "destructive"
-      });
-      
-      // Generate sample data as a fallback
-      setOrders([{
+      // Fallback to sample data
+      const sampleOrder = {
         id: `SAMPLE-${user?.clientCode || 'WS'}-001`,
         clientCode: user?.clientCode || 'WS',
         orderNumber: `SAMPLE-${user?.clientCode || 'WS'}-001`,
         carpetName: "Sample Carpet",
         dimensions: "8x10",
-        status: "ORDER_APPROVAL",
+        status: "ORDER_APPROVAL" as OrderStatus,
         hasDelay: false,
         timeline: [
-          { stage: "ORDER_APPROVAL", date: new Date().toISOString(), completed: true },
-          { stage: "RENDERING", date: undefined, completed: false },
-          { stage: "FINISHING", date: undefined, completed: false }
+          { stage: "ORDER_APPROVAL" as OrderStatus, date: new Date().toISOString(), completed: true },
+          { stage: "RENDERING" as OrderStatus, date: undefined, completed: false },
+          { stage: "FINISHING" as OrderStatus, date: undefined, completed: false }
         ],
         estimatedCompletion: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-      }]);
+      };
+      
+      setOrders([sampleOrder]);
+      toast({
+        title: "Using sample data",
+        description: "Error loading orders. Showing sample data for demonstration.",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchOrders();
+    if (user) {
+      fetchOrders();
+    }
   }, [user]);
 
   useEffect(() => {
-    if (showDebug) {
+    if (showDebug && dbConnectionStatus === 'connected') {
       fetchRawRecords();
     }
-  }, [showDebug]);
+  }, [showDebug, dbConnectionStatus]);
 
   const filteredOrders = orders.filter(order => {
     const matchesSearch = 
@@ -340,9 +328,7 @@ const Dashboard = () => {
             <Button 
               variant={showDebug ? "default" : "outline"} 
               size="sm" 
-              onClick={() => {
-                setShowDebug(!showDebug);
-              }}
+              onClick={() => setShowDebug(!showDebug)}
               className="flex items-center gap-2"
             >
               <Database className="h-4 w-4" />
@@ -367,17 +353,6 @@ const Dashboard = () => {
                 dbConnectionStatus === 'error' ? 'Connection Error' : 'Checking Connection...'
               }</span>
             </div>
-            
-            {dbConnectionStatus === 'error' && (
-              <div className="mt-2 text-sm p-2 bg-red-50 border border-red-200 rounded text-red-800">
-                <p>Troubleshooting Tips:</p>
-                <ul className="list-disc ml-5 mt-1">
-                  <li>Check if RLS policies are correctly set up</li>
-                  <li>Verify your Supabase connection settings</li>
-                  <li>Make sure you're authenticated properly</li>
-                </ul>
-              </div>
-            )}
             
             <div className="mt-4">
               <h4 className="font-semibold mb-2">Authentication Status</h4>
