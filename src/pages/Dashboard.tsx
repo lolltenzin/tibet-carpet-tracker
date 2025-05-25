@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/Header";
@@ -19,7 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const Dashboard = () => {
-  const { user, session } = useAuth();
+  const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -298,7 +297,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchOrders();
-  }, [session]);
+  }, [user]);
 
   useEffect(() => {
     if (showDebug) {
