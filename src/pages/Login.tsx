@@ -17,10 +17,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
 
 const Login = () => {
   const [username, setUsername] = useState("");
@@ -235,7 +231,11 @@ const Login = () => {
           )}
           
           <div className="mt-4 text-center text-sm text-muted-foreground">
-            <p>Contact your Tibet Carpet representative for login credentials.</p>
+            <p>
+              Try these credentials:<br />
+              Username: <strong>WS</strong>, Password: <strong>PASSWORD</strong><br />
+              Username: <strong>admin</strong>, Password: <strong>admin123</strong>
+            </p>
           </div>
         </div>
         
