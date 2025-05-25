@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/Header";
@@ -387,7 +388,7 @@ const Dashboard = () => {
                 <strong>Role:</strong> {user?.role || 'None'}
               </div>
               <div className="mb-2">
-                <strong>Supabase Session:</strong> {session ? 'Active' : 'None'}
+                <strong>Auth System:</strong> Local Storage (Mock Authentication)
               </div>
             </div>
             
