@@ -1,7 +1,7 @@
 
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { User } from '@/types';
-import { validateCredentials } from '@/lib/data';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 
 interface AuthContextType {
@@ -21,7 +21,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
   
   useEffect(() => {
-    // Check for existing user in localStorage
     checkExistingSession();
   }, []);
 
@@ -47,10 +46,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     
     try {
-      // Use our mock validation system
-      const authenticatedUser = validateCredentials(username, password);
+      console.log("Attempting login with username:", username);
       
-      if (authenticatedUser) {
+      // Check if user exists in the CarpetOrder table to get valid client codes
+      const { data: orders, error: ordersError } = await supabase
+        .from('CarpetOrder')
+        .select('Buyercode')
+        .limit(1000);
+      
+      if (ordersError) {
+        console.error("Error fetching orders:", ordersError);
+      }
+      
+      // Get unique buyer codes from the database
+      const validClientCodes = orders ? [...new Set(orders.map(order => order.Buyercode).filter(Boolean))] : [];
+      console.log("Valid client codes from database:", validClientCodes);
+      
+      // Check if the username matches any client code in the database
+      const isValidClient = validClientCodes.some(code => 
+        code && code.toString().toLowerCase() === username.toLowerCase()
+      );
+      
+      // Admin check
+      const isAdmin = username.toLowerCase() === 'admin' && password === 'admin123';
+      
+      // Simple password validation for clients (you can enhance this)
+      const isValidPassword = password === 'password' || password === 'PASSWORD' || isAdmin;
+      
+      if ((isValidClient && isValidPassword) || isAdmin) {
+        const authenticatedUser: User = {
+          id: isAdmin ? 'admin1' : `user_${username}`,
+          username: username,
+          clientCode: isAdmin ? 'TC' : username as any,
+          clientName: isAdmin ? 'System Administrator' : `${username} Client`,
+          role: isAdmin ? 'admin' : 'client'
+        };
+        
         setUser(authenticatedUser);
         localStorage.setItem('tibet_carpet_user', JSON.stringify(authenticatedUser));
         
@@ -64,7 +95,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
         toast({
           title: "Login failed",
-          description: "Invalid username or password",
+          description: "Invalid username or password. Please use a valid client code from your database.",
           variant: "destructive",
         });
         setIsLoading(false);

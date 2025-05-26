@@ -107,80 +107,6 @@ export const getStatusDisplayInfo = (status: OrderStatus) => {
   };
 };
 
-// Validate user credentials (temporary mock function)
-export const validateCredentials = (username: string, password: string): User | null => {
-  // Mock data for demonstration
-  const validUsers: Record<string, User> = {
-    "client1": {
-      id: "user1",
-      username: "client1",
-      clientCode: "TC",
-      clientName: "Tibet Carpet",
-      role: "client"
-    },
-    "client2": {
-      id: "user2",
-      username: "client2",
-      clientCode: "LC",
-      clientName: "Luxury Carpets",
-      role: "client"
-    },
-    "WS": {
-      id: "user3",
-      username: "WS",
-      clientCode: "WS",
-      clientName: "WS Client",
-      role: "client"
-    },
-    "RM": {
-      id: "user4",
-      username: "RM",
-      clientCode: "RM",
-      clientName: "Royal Mats",
-      role: "client"
-    },
-    "ADV": {
-      id: "user5",
-      username: "ADV",
-      clientCode: "ADV",
-      clientName: "Advance Designs",
-      role: "client"
-    },
-    "HR": {
-      id: "user6",
-      username: "HR",
-      clientCode: "HR",
-      clientName: "Himalayan Rugs",
-      role: "client"
-    },
-    "NB": {
-      id: "user7",
-      username: "NB",
-      clientCode: "NB",
-      clientName: "Noble Brands",
-      role: "client"
-    },
-    "admin": {
-      id: "admin1",
-      username: "admin",
-      clientCode: "TC",
-      clientName: "System Administrator",
-      role: "admin"
-    }
-  };
-
-  // Simple validation - checking if WS with PASSWORD, otherwise use default logic
-  if (username === "WS" && password === "PASSWORD") {
-    return validUsers["WS"];
-  } else if (username === "admin" && password === "admin123") {
-    return validUsers["admin"];
-  } else if (validUsers[username] && password === "password") {
-    return validUsers[username];
-  }
-
-  return null;
-};
-
 // Helper function to normalize status from database
 const normalizeStatus = (status: string): OrderStatus => {
   const normalized = status?.trim().toUpperCase().replace(/\s+/g, '_') || 'ORDER_APPROVAL';
@@ -275,7 +201,7 @@ export const mapCarpetOrderToOrder = (record: any): Order => {
 
 // Fetch all orders from Supabase
 export const getAllOrders = async (): Promise<Order[]> => {
-  console.log("Fetching all orders");
+  console.log("Fetching all orders from Supabase");
   
   try {
     const { data, error } = await supabase
@@ -284,7 +210,7 @@ export const getAllOrders = async (): Promise<Order[]> => {
       
     if (error) {
       console.error("Error fetching all orders:", error);
-      return [];
+      throw error;
     }
     
     console.log("All orders data:", data);
@@ -297,7 +223,7 @@ export const getAllOrders = async (): Promise<Order[]> => {
     return data.map(mapCarpetOrderToOrder);
   } catch (error) {
     console.error("Exception in getAllOrders:", error);
-    return [];
+    throw error;
   }
 };
 
@@ -313,7 +239,7 @@ export const getOrdersByClient = async (clientCode: ClientCode): Promise<Order[]
     
     if (error) {
       console.error("Error fetching orders for client:", error);
-      return [];
+      throw error;
     }
     
     console.log(`Found ${data?.length || 0} orders for Buyercode=${clientCode}`);
@@ -327,7 +253,7 @@ export const getOrdersByClient = async (clientCode: ClientCode): Promise<Order[]
         
       if (allError) {
         console.error("Error fetching all orders:", allError);
-        return [];
+        throw allError;
       }
       
       const matchingData = allData.filter(
@@ -347,7 +273,7 @@ export const getOrdersByClient = async (clientCode: ClientCode): Promise<Order[]
     return data.map(mapCarpetOrderToOrder);
   } catch (error) {
     console.error("Exception in getOrdersByClient:", error);
-    return [];
+    throw error;
   }
 };
 
@@ -362,12 +288,12 @@ export const getOrderById = async (orderId: string): Promise<Order | undefined> 
       
     if (error) {
       console.error("Error fetching order:", error);
-      return undefined;
+      throw error;
     }
     
     return mapCarpetOrderToOrder(data);
   } catch (error) {
     console.error("Exception in getOrderById:", error);
-    return undefined;
+    throw error;
   }
 };

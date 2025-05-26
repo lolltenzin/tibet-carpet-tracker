@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -232,9 +231,8 @@ const Login = () => {
           
           <div className="mt-4 text-center text-sm text-muted-foreground">
             <p>
-              Try these credentials:<br />
-              Username: <strong>WS</strong>, Password: <strong>PASSWORD</strong><br />
-              Username: <strong>admin</strong>, Password: <strong>admin123</strong>
+              Use any client code from your database with password: <strong>password</strong><br />
+              Or admin login: Username: <strong>admin</strong>, Password: <strong>admin123</strong>
             </p>
           </div>
         </div>
