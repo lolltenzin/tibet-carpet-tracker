@@ -5,12 +5,10 @@ import { Header } from "@/components/Header";
 import { OrderCard } from "@/components/OrderCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { getStatusDisplayInfo } from "@/lib/data";
+import { getStatusDisplayInfo, getOrdersByClient } from "@/lib/data";
 import { Order, OrderStatus } from "@/types";
-import { CheckCheck, Filter, Search, Loader2, AlertTriangle, Database, RefreshCw } from "lucide-react";
+import { Filter, Search, Loader2, AlertTriangle, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { supabase } from "@/integrations/supabase/client";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,15 +23,13 @@ const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<OrderStatus | "ALL">("ALL");
   const [showCompletedOrders, setShowCompletedOrders] = useState(true);
-  const [showDebug, setShowDebug] = useState(false);
-  const [dbConnectionStatus, setDbConnectionStatus] = useState<'checking' | 'connected' | 'error'>('checking');
-  const [rawRecords, setRawRecords] = useState<any[]>([]);
   const { toast } = useToast();
 
   // List of all possible order statuses to use in the filter
   const allStatuses: Array<OrderStatus | "ALL"> = [
     "ALL",
     "ORDER_APPROVAL",
+    "YARN_ISSUED",
     "RENDERING",
     "DYEING",
     "DYEING_READY",
@@ -47,234 +43,27 @@ const Dashboard = () => {
     "SECOND_REVISED_DELIVERY_DATE"
   ];
 
-  // Function to check database connection
-  const checkDbConnection = async () => {
-    setDbConnectionStatus('checking');
-    try {
-      // Test the connection by trying to query the CarpetOrder table
-      const { data, error } = await supabase.from('CarpetOrder').select('count()', { count: 'exact', head: true });
-      
-      if (error) {
-        console.error("Database connection error:", error);
-        setDbConnectionStatus('error');
-        toast({
-          title: "Database connection error",
-          description: `${error.message}. Using sample data instead.`,
-          variant: "destructive"
-        });
-      } else {
-        console.log("Database connected successfully");
-        setDbConnectionStatus('connected');
-      }
-    } catch (error) {
-      console.error("Exception checking DB connection:", error);
-      setDbConnectionStatus('error');
-      toast({
-        title: "Database connection failed",
-        description: "Using sample data instead.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  // Fetch raw records for debugging
-  const fetchRawRecords = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('CarpetOrder')
-        .select('*');
-      
-      if (error) {
-        console.error("Error fetching raw records:", error);
-        setRawRecords([]);
-      } else {
-        setRawRecords(data || []);
-        console.log("Raw records:", data);
-      }
-    } catch (error) {
-      console.error("Exception fetching raw records:", error);
-      setRawRecords([]);
-    }
-  };
-  
-  // Helper function to map database records to our Order type
-  const mapCarpetOrderToOrder = (record: any): Order => {
-    console.log("Mapping record:", record);
-    
-    const normalizeStatus = (status: string): OrderStatus => {
-      const normalized = status?.trim().toUpperCase().replace(/\s+/g, '_') || 'ORDER_APPROVAL';
-      
-      const statusMap: Record<string, OrderStatus> = {
-        'ORDER_APPROVAL': 'ORDER_APPROVAL',
-        'ORDER_ISSUED': 'ORDER_APPROVAL',
-        'YARN_ISSUED': 'YARN_ISSUED',
-        'RENDERING': 'RENDERING',
-        'DYEING': 'DYEING',
-        'DYEING_READY': 'DYEING_READY',
-        'WAITING_FOR_LOOM': 'WAITING_FOR_LOOM',
-        'ONLOOM': 'ONLOOM',
-        'ONLOOM_PROGRESS': 'ONLOOM_PROGRESS',
-        'OFFLOOM': 'OFFLOOM',
-        'FINISHING': 'FINISHING',
-        'DELIVERY_TIME': 'DELIVERY_TIME',
-        'DELIVERY': 'DELIVERY_TIME',
-        'FIRST_REVISED_DELIVERY_DATE': 'FIRST_REVISED_DELIVERY_DATE',
-        'SECOND_REVISED_DELIVERY_DATE': 'SECOND_REVISED_DELIVERY_DATE'
-      };
-      
-      return statusMap[normalized] || 'ORDER_APPROVAL';
-    };
-    
-    const buildOrderTimeline = (status: OrderStatus, orderIssuedDate?: string, deliveryDate?: string): Order['timeline'] => {
-      const allStatuses: OrderStatus[] = [
-        'ORDER_APPROVAL',
-        'YARN_ISSUED',
-        'DYEING',
-        'DYEING_READY',
-        'ONLOOM',
-        'OFFLOOM',
-        'FINISHING',
-        'DELIVERY_TIME'
-      ];
-      
-      const currentStatusInfo = getStatusDisplayInfo(status);
-      const currentOrder = currentStatusInfo.order;
-      
-      return allStatuses.map(stage => {
-        const stageInfo = getStatusDisplayInfo(stage);
-        const isCompleted = stageInfo.order <= currentOrder;
-        
-        let stageDate: string | undefined;
-        
-        if (stage === 'ORDER_APPROVAL' && orderIssuedDate) {
-          stageDate = orderIssuedDate;
-        } else if ((stage === 'DELIVERY_TIME' || stage === 'FINISHING') && deliveryDate) {
-          stageDate = deliveryDate;
-        } else if (isCompleted) {
-          const today = new Date();
-          const orderDate = orderIssuedDate ? new Date(orderIssuedDate) : new Date();
-          const deliveryDateObj = deliveryDate ? new Date(deliveryDate) : new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
-          
-          const totalDuration = deliveryDateObj.getTime() - orderDate.getTime();
-          const stagePosition = allStatuses.indexOf(stage) / (allStatuses.length - 1);
-          const estimatedTime = orderDate.getTime() + (totalDuration * stagePosition);
-          
-          stageDate = new Date(estimatedTime).toISOString();
-        }
-        
-        return {
-          stage,
-          date: stageDate,
-          completed: isCompleted
-        };
-      });
-    };
-    
-    const status = normalizeStatus(record.STATUS || "ORDER_APPROVAL");
-    const clientCode = record.Buyercode || "WS";
-    const timeline = buildOrderTimeline(status, record["Order issued"], record["Delivery Date"]);
-    
-    return {
-      id: record.Carpetno,
-      clientCode: clientCode,
-      orderNumber: record.Carpetno,
-      carpetName: record.Design || "Unnamed Design",
-      dimensions: record.Size || "Unknown",
-      status: status,
-      hasDelay: false,
-      timeline: timeline,
-      estimatedCompletion: record["Delivery Date"] || undefined
-    };
-  };
-  
   const fetchOrders = async () => {
+    if (!user) return;
+    
     setIsLoading(true);
     
     try {
-      // Create sample data first as fallback
-      const sampleOrder = {
-        id: `SAMPLE-${user?.clientCode || 'WS'}-001`,
-        clientCode: user?.clientCode || 'WS',
-        orderNumber: `SAMPLE-${user?.clientCode || 'WS'}-001`,
-        carpetName: "Sample Carpet",
-        dimensions: "8x10",
-        status: "ORDER_APPROVAL" as OrderStatus,
-        hasDelay: false,
-        timeline: [
-          { stage: "ORDER_APPROVAL" as OrderStatus, date: new Date().toISOString(), completed: true },
-          { stage: "RENDERING" as OrderStatus, date: undefined, completed: false },
-          { stage: "FINISHING" as OrderStatus, date: undefined, completed: false }
-        ],
-        estimatedCompletion: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-      };
-
-      // Try to connect to database
-      await checkDbConnection();
+      const fetchedOrders = await getOrdersByClient(user.clientCode);
+      setOrders(fetchedOrders);
       
-      if (dbConnectionStatus === 'error') {
-        // Use sample data if connection fails
-        setOrders([sampleOrder]);
-        toast({
-          title: "Using sample data",
-          description: "Could not connect to database. Showing sample data for demonstration.",
-          variant: "default"
-        });
-        return;
-      }
-
-      // Try to fetch real data
-      const { data, error } = await supabase
-        .from('CarpetOrder')
-        .select('*');
-
-      if (error) {
-        console.error("Error fetching orders:", error);
-        setOrders([sampleOrder]);
-        toast({
-          title: "Using sample data",
-          description: "Could not fetch orders from database. Showing sample data.",
-          variant: "default"
-        });
-        return;
-      }
-
-      if (data && data.length > 0) {
-        console.log("Found orders:", data);
-        const fetchedOrders = data.map(record => mapCarpetOrderToOrder(record));
-        setOrders(fetchedOrders);
-      } else {
-        console.log("No orders found in database, using sample data");
-        setOrders([sampleOrder]);
+      if (fetchedOrders.length === 0) {
         toast({
           title: "No orders found",
-          description: "Sample data is being shown for demonstration purposes.",
+          description: "No orders found for your account.",
           variant: "default"
         });
       }
-      
     } catch (error: any) {
       console.error("Error fetching orders:", error);
-      // Fallback to sample data
-      const sampleOrder = {
-        id: `SAMPLE-${user?.clientCode || 'WS'}-001`,
-        clientCode: user?.clientCode || 'WS',
-        orderNumber: `SAMPLE-${user?.clientCode || 'WS'}-001`,
-        carpetName: "Sample Carpet",
-        dimensions: "8x10",
-        status: "ORDER_APPROVAL" as OrderStatus,
-        hasDelay: false,
-        timeline: [
-          { stage: "ORDER_APPROVAL" as OrderStatus, date: new Date().toISOString(), completed: true },
-          { stage: "RENDERING" as OrderStatus, date: undefined, completed: false },
-          { stage: "FINISHING" as OrderStatus, date: undefined, completed: false }
-        ],
-        estimatedCompletion: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-      };
-      
-      setOrders([sampleOrder]);
       toast({
-        title: "Using sample data",
-        description: "Error loading orders. Showing sample data for demonstration.",
+        title: "Error loading orders",
+        description: "There was a problem loading your orders. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -287,12 +76,6 @@ const Dashboard = () => {
       fetchOrders();
     }
   }, [user]);
-
-  useEffect(() => {
-    if (showDebug && dbConnectionStatus === 'connected') {
-      fetchRawRecords();
-    }
-  }, [showDebug, dbConnectionStatus]);
 
   const filteredOrders = orders.filter(order => {
     const matchesSearch = 
@@ -312,73 +95,18 @@ const Dashboard = () => {
       <Header />
       
       <main className="flex-1 container py-6">
-        {/* Debug Tools */}
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl font-bold">Your Orders</h1>
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={fetchOrders}
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Refresh Data
-            </Button>
-            <Button 
-              variant={showDebug ? "default" : "outline"} 
-              size="sm" 
-              onClick={() => setShowDebug(!showDebug)}
-              className="flex items-center gap-2"
-            >
-              <Database className="h-4 w-4" />
-              {showDebug ? "Hide Debug" : "Debug View"}
-            </Button>
-          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={fetchOrders}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh Data
+          </Button>
         </div>
-        
-        {/* Database Connection Status (Debug) */}
-        {showDebug && (
-          <div className="mb-6 p-4 border rounded-lg bg-white">
-            <h3 className="font-semibold mb-2">Database Connection Status</h3>
-            <div className="flex items-center gap-2 mb-2">
-              <div 
-                className={`w-3 h-3 rounded-full ${
-                  dbConnectionStatus === 'connected' ? 'bg-green-500' : 
-                  dbConnectionStatus === 'error' ? 'bg-red-500' : 'bg-yellow-500'
-                }`} 
-              />
-              <span>{
-                dbConnectionStatus === 'connected' ? 'Connected to Database' : 
-                dbConnectionStatus === 'error' ? 'Connection Error' : 'Checking Connection...'
-              }</span>
-            </div>
-            
-            <div className="mt-4">
-              <h4 className="font-semibold mb-2">Authentication Status</h4>
-              <div className="mb-2">
-                <strong>User:</strong> {user ? `${user.clientName} (${user.clientCode})` : 'Not logged in'}
-              </div>
-              <div className="mb-2">
-                <strong>Role:</strong> {user?.role || 'None'}
-              </div>
-              <div className="mb-2">
-                <strong>Auth System:</strong> Local Storage (Mock Authentication)
-              </div>
-            </div>
-            
-            <div className="mt-4">
-              <h4 className="font-semibold mb-2">Raw Records ({rawRecords.length})</h4>
-              {rawRecords.length > 0 ? (
-                <div className="overflow-auto max-h-64 border rounded">
-                  <pre className="p-2 text-xs">{JSON.stringify(rawRecords, null, 2)}</pre>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No raw records found in database.</p>
-              )}
-            </div>
-          </div>
-        )}
         
         {/* Filters and Search */}
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
